@@ -278,10 +278,11 @@ flowchart LR
 - **配置容错**：`conf.xml` 损坏时给出清晰提示，可选择恢复默认配置（会丢失个人数据）或中止并手动修复；版本号变更时自动同步配置。
 - **同步加载配置**：MSXML 显式设置 `async := False`，避免「文档尚未解析完就读取节点」导致的偶发失败。
 - **自动清理**：启动时对工作集做内存精简。
-- **版本检查与更新**：支持联网检查更新（见下方说明）。
+- **版本检查与更新**：Help → Check for Updates（或启动时自动检查）读取本仓库 `Main` 分支上主脚本的 `version` 字段；发现新版本并确认后，下载该分支的 zip、用系统自带的 `tar` 解压、覆盖到程序目录并重启（编译版经 `update.bat` 完成）。更新**不会覆盖本机的 `conf.xml`**。
 
 > [!WARNING]
-> 自动更新的地址指向**上游** `RaptorX/AHK-ToolKit`。本分支默认关闭「启动时检查更新」（`cfu="0"`），请保持关闭，以免被上游版本覆盖本地改动。
+> 更新源由主脚本 `script` 对象的 `repo`（`YinsitanAI/AHK-ToolKit`）与 `branch`（`Main`）决定。**分支名区分大小写**：本仓库默认分支是 `Main`，写成 `main` 会 404。发布新版本时，请在 `Main` 分支上提高 `AHK-ToolKit.ahk` 中的 `version`（并重新编译、提交 `AHK-ToolKit.exe`），客户端才会提示更新。
+> 访问 `raw.githubusercontent.com` / `github.com` 需要能连通 GitHub；网络不通时，手动检查会提示「无法连接更新服务器」，启动时的自动检查则静默跳过。解压依赖 Windows 10 1803+ 自带的 `tar`（更老的系统回退到 Shell 解压，可能失败并提示）。
 
 ---
 
@@ -442,7 +443,7 @@ AHK-ToolKit/
 | 待完善 | 个人手势层（`[Hotkeys/Hotstrings]` 区段）含大量硬编码的 `D:\` 路径，需要按自己的环境修改 |
 | 注意 | Autoexec 中的自动提权代码引用了未定义的 `ShellExecute` 变量，实际不会触发 UAC；需要管理员权限时请手动「以管理员身份运行」，或改用 `lib/FileSearch.ahk` 中的 `RunAsTask()` |
 | 注意 | 仓库中的 `AHK-ToolKit.exe` 为优化前编译的产物，请重新编译 |
-| 注意 | 「检查更新」仍指向上游 `RaptorX/AHK-ToolKit` 仓库 |
+| 注意 | 版本号按字符串比较（如 `0.10.0` 会被判为小于 `0.9.0`），升级版本号时请保持位数一致或使用日期后缀 |
 
 ---
 
