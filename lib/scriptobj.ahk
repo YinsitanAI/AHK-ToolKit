@@ -172,35 +172,34 @@ class scriptobj
         script.dbg ? script.debug("* getparams() [End]") : null
         return
     }
-    update(lversion, rfile="github", logurl="", vline=1){
+    update(lversion, rfile="github", logurl=""){
         global script                       ; 本文件先于主脚本被 #include，主脚本里的 global script 对这里不可见，必须显式声明
         script.dbg ? script.debug("* update() [Start]", 1) : null
         
         if (a_thismenuitem = Tr("Check for Updates"))
             Progress, 50,,, % Tr("Updating...")
 
-        logurl := rfile = "github" ? "https://raw.github.com/" script.author
-                                   . "/" script.name "/ver/ver" : logurl
+        ; 更新源 = 本项目仓库(script.repo)的 script.branch 分支（分支名区分大小写，本仓库默认分支为 Main）：
+        ;  - 版本号：直接读取该分支上主脚本自身的 version 字段，只需维护一处，不再需要单独的 ver 文件/分支；
+        ;  - 更新包：该分支的 zip 存档，解压后的根目录名为「仓库名-分支名」。
+        ; 版本文件网址追加时间戳，避免 WinINet 缓存命中旧文件。
+        logurl := rfile = "github" ? "https://raw.githubusercontent.com/" script.repo "/" script.branch
+                                   . "/" script.name ".ahk?" a_now : logurl
+        rfile  := rfile = "github" ? "https://github.com/" script.repo "/archive/refs/heads/" script.branch ".zip" : rfile
+        script.dbg ? script.debug("* Version URL: " logurl "`n* Package URL: " rfile) : null
 
-        RunWait %ComSpec% /c "Ping -n 1 google.com" ,, Hide  ; Check if we are connected to the internet
-        if connected := !ErrorLevel
+        ; 以「版本文件能否下载并解析出版本号」判断网络是否可用（原先 ping google.com，在国内网络下通常失败）
+        UrlDownloadToFile, %logurl%, %a_temp%\logurl
+        dlok := !ErrorLevel
+        FileRead, vtext, %a_temp%\logurl
+        FileDelete, %a_temp%\logurl
+        RegExMatch(vtext, ",version\s*:\s*""v?([^""]+)""", Version)    ; 匹配脚本信息对象中的「,version : "x.y.z"」（不用 ^ 锚点：AHK 正则默认换行符是 CRLF，对 LF 文件不生效）
+        if connected := (dlok && Version1 != "")
         {
-            script.dbg ? script.debug("* Downloading log file") : null
+            script.dbg ? script.debug("* Local Version: " lversion " Remote Version: " Version1) : null
 
             if (a_thismenuitem = Tr("Check for Updates"))
                 Progress, 90
-
-            UrlDownloadToFile, %logurl%, %a_temp%\logurl
-            FileReadLine, logurl, %a_temp%\logurl, %vline%
-            FileDelete, %a_temp%\logurl
-            
-            script.dbg ? script.debug("* Version: " logurl) : null
-            RegexMatch(logurl, "v(.*)", Version)
-            rfile := rfile = "github" ? ("https://www.github.com/"  
-                                      . script.author "/" 
-                                      . script.name "/zipball/" (a_iscompiled ? "latest-compiled" : "latest"))
-                                      : rfile
-            script.dbg ? script.debug("* Local Version: " lversion " Remote Version: " Version1) : null
             
             if (Version1 > lversion){
                 Progress, Off
@@ -208,7 +207,7 @@ class scriptobj
                 Msgbox, 0x40044
                       , % Tr("New Update Available")
                       , % Tr("There is a new update available for this application.`n"
-                           . "Do you wish to upgrade to {1}?", Version)
+                           . "Do you wish to upgrade to {1}?", "v" Version1)
                       , 10 ; 10s timeout
                 IfMsgbox, Timeout
                 {
@@ -221,20 +220,45 @@ class scriptobj
                     return 2
                 }
                 script.dbg ? script.debug("* Downloading file to: " a_temp "\" script.name ".zip") : null
-                Download(rfile, a_temp "\" script.name ".zip")
-                oShell := ComObjCreate("Shell.Application")
-                oDir := oShell.NameSpace(a_temp), oZip := oShell.NameSpace(a_temp "\" script.name ".zip") ; slashes are sensitive
-                oDir.CopyHere(oZip.Items), oShell := oDir := oZip := ""
-                
-                ; FileCopy instead of FileMove so that file permissions are inherited correctly.
-                Loop, % a_temp "/" script.author "*", 1
+                if !Download(rfile, a_temp "\" script.name ".zip")
                 {
+                    script.dbg ? script.debug("* Download failed", 3) : null
+                    Msgbox, 0x40030, % Tr("Update Check Failed"), % Tr("Unable to reach the update server.`nPlease check your network connection and try again.")
+                    return 3
+                }
+                zipf := a_temp "\" script.name ".zip", dest := a_temp "\" script.name "-" script.branch
+                FileRemoveDir, %dest%, 1                                    ; 清理上次遗留的解压目录，避免解压时弹出覆盖确认
+                ; 解压：优先用系统自带的 tar.exe（Win10 1803+，同步解压）；没有 tar 的旧系统回退到 Shell.Application
+                ; （CopyHere 可能异步完成，所以下面要等待并校验）。
+                RunWait, % "tar -xf """ zipf """ -C """ a_temp """",, Hide UseErrorLevel
+                if !FileExist(dest "\" script.name ".ahk")
+                {
+                    oShell := ComObjCreate("Shell.Application")
+                    try oShell.NameSpace(a_temp).CopyHere(oShell.NameSpace(zipf).Items)
+                    oShell := ""
+                    Loop, 50                                                ; 最多等 5 s 让解压完成
+                        if !FileExist(dest "\" script.name ".ahk")
+                            Sleep, 100
+                        else
+                            break
+                }
+                if !FileExist(dest "\" script.name ".ahk")                  ; 校验解压结果，失败则中止，避免误报「安装完成」
+                {
+                    script.dbg ? script.debug("* Extraction failed", 3) : null
+                    Msgbox, 0x40030, % Tr("Update Failed"), % Tr("The update package could not be extracted.")
+                    return 3
+                }
+
+                ; FileCopy instead of FileMove so that file permissions are inherited correctly.
+                Loop, %dest%, 1
+                {
+                    FileDelete, % a_loopfilelongpath "\" script.conf    ; 保留本机的 conf.xml，不被仓库中的同名文件覆盖
                     if (a_iscompiled){
                         FileAppend,
                         (Ltrim
                             echo off
                             PING 1.1.1.1 -n 1 -w 5000 >NUL
-                            cd "%a_temp%"
+                            cd /d "%a_temp%"
                             xcopy /E /Y "%a_loopfilename%" "%a_scriptdir%"
                             rmdir /S /Q "%a_loopfilename%"
                             %comspec% /c "%a_scriptfullpath%"
@@ -289,6 +313,8 @@ class scriptobj
         {
             Progress, Off
             script.dbg ? (script.debug("* Connection Failed", 3), script.debug("* update() [End]", 2)) : null
+            if (a_thismenuitem = Tr("Check for Updates"))       ; 启动时的静默检查不打扰用户，手动检查才提示
+                Msgbox, 0x40030, % Tr("Update Check Failed"), % Tr("Unable to reach the update server.`nPlease check your network connection and try again.")
             return 3
         }
     }
@@ -349,7 +375,7 @@ Download(url, file)
     Progress, Hide CWE0E0E0 CT000020 CB1111DD x%x% y%y% w330 h52 B1 FM8 FS8 WM700 WS700 ZH12 ZY3 C11,, %_cu%, % script.name, Tahoma
     
     if (0 = DllCall("urlmon\URLDownloadToCacheFile", "ptr", 0, "str", url, "str", tn, "uint", 260, "uint", 0x10, "ptr*", &vt))
-        FileCopy %tn%, %file%
+        FileCopy %tn%, %file%, 1                    ; 1 = 覆盖：上次更新失败遗留的 zip 若不覆盖，之后每次下载都会失败
     else
         ErrorLevel := 1
     Progress Off

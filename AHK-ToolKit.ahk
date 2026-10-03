@@ -104,7 +104,9 @@ global script := { base        : scriptobj
                   ,homepage    : "http://www.autohotkey.com/forum/topic61379.html#376087"
                   ,crtdate     : "July 11, 2010"
                   ,moddate     : "October 20, 2012"
-                  ,conf        : "conf.xml"}
+                  ,conf        : "conf.xml"
+                  ,repo        : "YinsitanAI/AHK-ToolKit"   ; 更新源：GitHub 仓库 ...
+                  ,branch      : "Main"}                    ; ... 及分支（区分大小写；本仓库默认分支为 Main，写成 main 会 404）
 script.getparams()                                  ; 处理命令行参数（-h / -v / -d ...）
 ;}
 
@@ -475,6 +477,10 @@ LoadZh(){
         Save File as...|另存为...
         Language changed. The program will reload to apply it.|语言已更改，程序将重新加载以使其生效。
         Updating...|正在检查更新...
+        Update Check Failed|检查更新失败
+        Unable to reach the update server.`nPlease check your network connection and try again.|无法连接更新服务器。`n请检查网络连接后重试。
+        Update Failed|更新失败
+        The update package could not be extracted.|无法解压更新包。
         New Update Available|发现新版本
         There is a new update available for this application.`nDo you wish to upgrade to {1}?|本程序有新版本可用。`n是否升级到 {1}？
         Installation Complete|安装完成
