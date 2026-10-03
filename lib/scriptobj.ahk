@@ -173,15 +173,11 @@ class scriptobj
         return
     }
     update(lversion, rfile="github", logurl="", vline=1){
-        script.dbg ? script.debug("* update() [Start]", 1) : null, node := conf.selectSingleNode("/" script.name "/@version")
-        if  node.text != script.version
-        {
-            node.text := script.version
-            conf.save(script.conf), conf.load(script.conf), node:=root:=options:=null             ; Save & Clean
-        }
+        global script                       ; 本文件先于主脚本被 #include，主脚本里的 global script 对这里不可见，必须显式声明
+        script.dbg ? script.debug("* update() [Start]", 1) : null
         
-        if a_thismenuitem = Check for Updates
-            Progress, 50,,, % "Updating..."
+        if (a_thismenuitem = Tr("Check for Updates"))
+            Progress, 50,,, % Tr("Updating...")
 
         logurl := rfile = "github" ? "https://raw.github.com/" script.author
                                    . "/" script.name "/ver/ver" : logurl
@@ -191,7 +187,7 @@ class scriptobj
         {
             script.dbg ? script.debug("* Downloading log file") : null
 
-            if a_thismenuitem = Check for Updates
+            if (a_thismenuitem = Tr("Check for Updates"))
                 Progress, 90
 
             UrlDownloadToFile, %logurl%, %a_temp%\logurl
@@ -210,9 +206,9 @@ class scriptobj
                 Progress, Off
                 script.dbg ? script.debug("* There is a new update available") : null
                 Msgbox, 0x40044
-                      , % "New Update Available"
-                      , % "There is a new update available for this application.`n"
-                        . "Do you wish to upgrade to " Version "?"
+                      , % Tr("New Update Available")
+                      , % Tr("There is a new update available for this application.`n"
+                           . "Do you wish to upgrade to {1}?", Version)
                       , 10 ; 10s timeout
                 IfMsgbox, Timeout
                 {
@@ -258,22 +254,22 @@ class scriptobj
                 FileRemoveDir, % a_temp "/Temporary Directory 1 for " script.name ".zip", 1
                 
                 Msgbox, 0x40040
-                      , % "Installation Complete"
-                      , % "The application will now restart."
+                      , % Tr("Installation Complete")
+                      , % Tr("The application will now restart.")
 
                 if (a_iscompiled)
                     ExitApp
                 else
                     Reload
             }
-            else if (a_thismenuitem = "Check for Updates")
+            else if (a_thismenuitem = Tr("Check for Updates"))
             {
                 Progress, Off
                 script.dbg ? (script.debug("* Script is up to date"), script.debug("* update() [End]", 2)) : null
                 Msgbox, 0x40040
-                      , % "Script is up to date"
-                      , % "You are using the latest version of this script.`n"
-                        . "Current version is v" lversion
+                      , % Tr("Script is up to date")
+                      , % Tr("You are using the latest version of this script.`n"
+                           . "Current version is v{1}", lversion)
                       , 10 ; 10s timeout
 
                 IfMsgbox, Timeout
@@ -295,33 +291,6 @@ class scriptobj
             script.dbg ? (script.debug("* Connection Failed", 3), script.debug("* update() [End]", 2)) : null
             return 3
         }
-    }
-    splash(img=""){
-        global
-
-        Gui, 99: -Caption +LastFound +Border +AlwaysOnTop +Owner
-        $hwnd := WinExist()
-        WinSet, Transparent, 0
-
-        Gui, 99: add, Picture, x0 y0, % img
-        Gui, 99: show, w500 h200 NoActivate
-
-        Loop, 255
-        {
-            alpha += 1
-            WinSet, Transparent, %alpha%
-        }
-
-        Sleep, 2.5*sec
-
-        Loop, 255
-        {
-            alpha--
-            WinSet, Transparent, %alpha%
-        }
-
-        Gui, 99: destroy
-        return
     }
     autostart(status){
         if status
