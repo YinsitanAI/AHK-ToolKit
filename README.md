@@ -4,13 +4,13 @@
 
 # AutoHotkey ToolKit
 
-**面向 Windows 的 AutoHotkey 一体化效率工作台**
+**面向 Windows 的 AutoHotkey 热键工作台**
 
-热键与热字符串管理 · 实时代码沙盒 · 剪贴板代码分享 · 命令助手 · 屏幕工具 · 拼音即时文件检索 · 鼠标手势增强
+可视化热键管理 · 插入键（RunNoToggle）· 中 / 英双语界面 · 高 DPI 自适应 · 拼音即时文件检索 · 鼠标手势增强
 
 <p>
   <img alt="平台" src="https://img.shields.io/badge/平台-Windows-0078D6?logo=windows&logoColor=white">
-  <img alt="AutoHotkey" src="https://img.shields.io/badge/AutoHotkey-v1.1.x-334455">
+  <img alt="AutoHotkey" src="https://img.shields.io/badge/AutoHotkey-v1.1.30+-334455">
   <img alt="版本" src="https://img.shields.io/badge/版本-0.9.0--161030-2EA44F">
   <img alt="许可证" src="https://img.shields.io/badge/许可证-GPLv3-blue">
 </p>
@@ -21,6 +21,7 @@
 [快捷键速查](#快捷键速查) ·
 [配置参考](#配置参考) ·
 [架构设计](#架构设计) ·
+[按键稳定性](#按键稳定性ctrlc-偶发变成-c) ·
 [常见问题](#常见问题)
 
 </div>
@@ -29,19 +30,19 @@
 
 ## 项目简介
 
-**AHK-ToolKit** 是一个常驻系统托盘的 AutoHotkey 工具集。它把日常高频、却散落在各个脚本里的需求——全局热键、文本扩展、代码试跑、代码分享、文档速查、截图、文件检索——整合到**同一个图形界面**与**同一份配置文件**中，让 AutoHotkey 的日常使用从「反复编辑脚本并重载」升级为「所见即所得的可视化管理」。
+**AHK-ToolKit** 是一个常驻系统托盘的 AutoHotkey 热键管理工具。它把「改脚本 → 保存 → 重载」的循环，换成**所见即所得的图形界面**：新增、修改、删除热键即时生效，全部数据保存在**同一份配置文件**中。
 
-项目由 **RaptorX** 于 2010 年创建并以 GPLv3 开源；本仓库在上游 0.8.x 的基础上继续演进至 **0.9.0-161030**。当前版本在保留全部原有能力的前提下，集成了高 DPI 自适应界面、基于 Everything 的拼音首字母即时文件检索，以及面向鼠标与滚轮的窗口管理手势层。
+项目由 **RaptorX** 于 2010 年创建并以 GPLv3 开源；本仓库在上游 0.8.x 的基础上演进至 **0.9.0-161030**，并在本轮优化中做了**精简与加固**：移除代码检测、命令助手、Live Code、屏幕工具与热字符串五个模块（连同 Scintilla 等随附组件），集中打磨热键管理本身——新增中 / 英文界面切换、原生高 DPI 适配、「插入按键」高级选项，并对「Ctrl+C 偶发变成字母 c」这类吞键问题做了排查与加固。
 
 ### 设计理念
 
 | 理念 | 说明 |
 | :-- | :-- |
-| **零重启** | 热键通过 `Hotkey` 命令即时注册；热字符串由独立宿主进程承载并在变更时自动重建，新增、修改、删除均无需重启主程序。 |
-| **零依赖运行** | 随程序附带 AutoHotkey_L 1.1.00.00 回退解释器（`res/ahkl.bak`）。使用编译版时，即使电脑上没有安装 AutoHotkey，Live Code 与脚本型热键依然可以运行。 |
-| **配置即数据** | 全部设置、热键、热字符串、代码片段、语法配色集中保存于单个 `conf.xml`（UTF-8，缩进格式化），便于备份、迁移与版本管理。 |
-| **可进可退** | 支持从现有 `.ahk` 脚本批量导入热键 / 热字符串，也可随时导出为标准 `.ahk` 文件，不被工具「锁定」。 |
-| **开放可改** | 单文件主程序 + 模块化 `lib/`，代码结构清晰，GPLv3 授权，欢迎二次开发。 |
+| **零重启** | 热键通过 `Hotkey` 命令即时注册；新增、修改、删除均无需重启主程序。 |
+| **配置即数据** | 全部设置与热键集中保存于单个 `conf.xml`（UTF-8，缩进格式化），便于备份、迁移与版本管理。 |
+| **可进可退** | 支持从现有 `.ahk` 脚本批量导入热键，也可随时导出为标准 `.ahk` 文件，不被工具「锁定」。 |
+| **稳定优先** | 避免向系统注入多余的 Ctrl 事件、缩短钩子超时窗口、热键回调不再反查配置，降低「按键丢失 / 修饰键错乱」的风险。 |
+| **开放可改** | 单文件主程序 + 精简的 `lib/`，核心逻辑均有中文注释，GPLv3 授权，欢迎二次开发。 |
 
 ---
 
@@ -49,18 +50,14 @@
 
 | 模块 | 能力概述 | 入口 |
 | :-- | :-- | :-- |
-| **热键管理器** | 以列表管理脚本 / 文件 / 文件夹三类热键；支持左右修饰键、通配符、钩子、松开触发等高级修饰；即时生效 | 主窗口 · Hotkeys |
-| **热字符串管理器** | 单行 / 多行文本扩展与脚本型热字符串；内置选项复选框；快速添加面板 | 主窗口 · Hotstrings |
-| **Live Code** | 基于 Scintilla 的 AHK 实时代码沙盒：语法高亮、代码折叠、一键运行、多解释器切换 | 主窗口 · Live Code |
-| **代码片段库** | 分组管理常用代码片段；双击插入、右键新建 / 编辑 / 重命名 / 删除 | Live Code 右侧面板 |
-| **Codet 代码检测** | 监听剪贴板，识别 AHK 代码后弹窗确认或自动上传到 Pastebin，并回写分享链接 | 偏好设置 · Code Detection |
-| **CMDHelper 命令助手** | 对光标处单词一键查询本地 CHM 帮助或在线文档；论坛 `[url]` 标签自动生成 | 全局热键 |
-| **论坛 BBCode 助手** | 在 AutoHotkey 社区页面中，用热字符串快速补全 `[b]` `[code]` `[color=` `[size=` 等标签 | 浏览器 · 社区页面 |
-| **屏幕工具** | 半透明选区截图、全屏截图；在设计 / 游戏类窗口中自动避让 | 全局热键 |
-| **导入 / 导出** | 递归扫描文件夹或选择多个 `.ahk`，用正则解析热键与热字符串；导出为带 `#IfWinActive` 的标准脚本 | File 菜单 |
+| **热键管理器** | 以列表管理「文件 / 文件夹」热键；支持窗口条件、左右修饰键、通配符、透传、钩子、松开触发；即时生效 | 主窗口 |
+| **插入按键** | 触发后**先补发一个按键再启动目标**，等价于 `RunNoToggle`：趁 Shift 仍按住时补发 `vk07`，阻止输入法把这次 Shift 当作单击而切换中 / 英文 | 添加热键 · 高级选项 |
+| **双语界面** | English / 中文 一键切换，覆盖菜单、对话框、列表、提示与状态栏；切换后自动重载生效 | 首选项 · Language |
+| **高 DPI 自适应** | 使用 AutoHotkey 原生 DPI 缩放：所有窗口按 96 DPI 基准布局，在 125% / 150% / 200% 缩放下清晰、比例一致 | 全部窗口 |
+| **导入 / 导出** | 递归扫描文件夹或选择多个 `.ahk`，解析单行 `热键::Run, 路径` 导入；导出为标准脚本（窗口条件转为 `#If`） | File 菜单 |
 | **内置搜索** | 当前目录拼音首字母匹配 + Everything 全盘检索；智能跳转到资源管理器 / Total Commander 等 | `Alt + CapsLock` |
-| **鼠标手势层** | 侧键、滚轮、右键组合：调音量与亮度、最小化 / 最大化 / 关闭窗口、窗口拖拽缩放、跨屏移动 | 鼠标 |
-| **系统集成** | 托盘常驻、开机自启、单实例、挂起 / 重载热键、命令行调试参数、配置损坏恢复 | 托盘 / 命令行 |
+| **鼠标手势层** | 侧键、滚轮、右键组合：调音量与亮度、最小化 / 最大化 / 关闭窗口、窗口拖拽缩放、跨屏移动（个人工作流） | 鼠标 |
+| **系统集成** | 托盘常驻、开机自启、单实例、挂起 / 重载热键、按键历史、配置损坏恢复 | 托盘 / 命令行 |
 
 ---
 
@@ -71,14 +68,16 @@
 | 项目 | 要求 |
 | :-- | :-- |
 | 操作系统 | Windows（内置搜索模块要求 **64 位** 系统；推荐 Windows 10 / 11） |
-| 运行方式 | **预编译 EXE**（无需安装 AutoHotkey）或 **AutoHotkey_L 1.1.x 源码运行** |
-| 位数 | 随附的 `SciLexer.dll`、`LexAHKL.dll` 为 32 位，主程序须以 **32 位** AutoHotkey_L 运行 / 编译 |
-| 不兼容 | AutoHotkey v2.0（项目使用 v1 语法） |
+| 运行方式 | **AutoHotkey_L v1.1.30+（Unicode、32 位）源码运行**，或自行编译为 32 位 EXE（内置搜索加载 `Everything32.dll`，需 32 位进程） |
+| 不兼容 | AutoHotkey v2.0（项目使用 v1 语法）、ANSI 版 |
 | Everything | 当前版本在启动时会拉起 Everything，需自备并配置路径（见下文警告） |
 
 > [!WARNING]
-> **启动前必读：Everything 路径。** 主程序在启动阶段（`AHK-ToolKit.ahk` 约 L110–112）会无条件执行 `Gosub, EverythingStart`，先结束已运行的 `Everything64.exe` / `Everything.exe` / `LoveStudy.exe`，再从 `EveryThingPath` 启动 `LoveStudy.exe -startup`。
+> **启动前必读：Everything 路径。** 主程序在启动阶段（`AHK-ToolKit.ahk` 的 `[Basic Script Info]` 区段，约 L95–97）会无条件执行 `Gosub, EverythingStart`，先结束已运行的 `Everything64.exe` / `Everything.exe` / `LoveStudy.exe`，再从 `EveryThingPath` 启动 `LoveStudy.exe -startup`。
 > 如果该路径无效，程序会提示「Everything运行出错」并**直接退出**。请先按 [需要按需修改的位置](#需要按需修改的位置) 调整路径；若不需要内置搜索，参见 [常见问题](#常见问题) 中的精简办法。
+
+> [!IMPORTANT]
+> 仓库中的 `AHK-ToolKit.exe` 是**优化前**编译的旧版本，不包含本轮改动。请使用源码运行，或用 Ahk2Exe 重新编译 `AHK-ToolKit.ahk`。
 
 ### 获取与运行
 
@@ -87,42 +86,38 @@ git clone https://github.com/YinsitanAI/AHK-ToolKit.git
 cd AHK-ToolKit
 ```
 
-**方式 A：直接运行预编译程序**
-
-双击 `AHK-ToolKit.exe`。程序需与 `lib/`、`res/`、`conf.xml` 位于同一目录。
-
-**方式 B：源码运行**
+**方式 A：源码运行**
 
 ```bat
-:: 使用 32 位 AutoHotkey_L 1.1.x 执行
+:: 使用 32 位 AutoHotkey_L 1.1.30+ Unicode 版执行
 AutoHotkeyU32.exe AHK-ToolKit.ahk
 ```
 
-**方式 C：自行编译**
+**方式 B：自行编译**
 
-使用 Ahk2Exe 编译 `AHK-ToolKit.ahk`。源码末尾内置了 `Compile_AHK SETTINGS` 区块，已预置版本信息与图标（`res/AHK-TK.ico`）；修改过个人路径后建议重新编译。
+使用 Ahk2Exe 编译 `AHK-ToolKit.ahk`。源码末尾内置了 `Compile_AHK SETTINGS` 区块，已预置版本信息与图标（`res/AHK-TK.ico`）。编译后的 EXE 需与 `lib/`、`res/`、`conf.xml` 位于同一目录。
 
 > [!TIP]
 > 仓库自带的 `conf.xml` 是作者本人的使用数据（含大量指向 `D:\` 的热键）。如果想从**干净状态**开始，请先将其重命名或删除，程序将自动进入下方的首次运行向导并生成默认配置。
 
 ### 首次运行向导
 
-当 `conf.xml` 不存在时，程序弹出 **First Run** 窗口，一次性完成基础设置：
+当 `conf.xml` 不存在时，程序弹出 **First Run / 首次运行** 窗口，一次性完成基础设置：
 
 | 分组 | 选项 |
 | :-- | :-- |
-| Startup | 显示启动画面 · 随 Windows 启动 · 启动后最小化 · 启动时检查更新 |
-| Main GUI Hotkey | 唤出主窗口的全局热键，默认 `` Win + ` ``（Win + 反引号） |
-| Other Tools | 启用代码检测 · 启用命令助手 · 启用论坛标签自动补全 · 启用屏幕工具 |
+| Startup / 启动 | 随 Windows 启动 · 启动后最小化 · 启动时检查更新 |
+| Language / 语言 | English · 中文（默认跟随系统界面语言） |
+| Main GUI Hotkey / 主窗口热键 | 唤出主窗口的全局热键，默认 `` Win + ` ``（Win + 反引号）；窗口激活时直接按键即可选中该键 |
 
-所有选项之后均可在 **Settings → Preferences**（`Ctrl + P`）中修改。
+所有选项之后均可在 **Settings → Preferences**（`Ctrl + P`）中修改；切换语言后程序会自动重载。
 
 ### 日常使用路径
 
 1. 按 `` Win + ` `` 呼出主窗口（再按一次隐藏；点击托盘图标同样可以切换）。
-2. 在 **Hotkeys** 页点击 **Add**，选择类型、录入按键，保存后**立即生效**。
-3. 在 **Hotstrings** 页的 **Quick Add** 区填入缩写与展开内容，点 **Add** 即可使用。
-4. 在 **Live Code** 页写下脚本，点 **Run** 试跑；常用代码存入片段库。
+2. 点击 **Add**，选择类型、录入按键，保存后**立即生效**。
+3. 需要「先补发按键再启动」（如替代 `+b::RunNoToggle(...)`）时，在**高级选项**中勾选 **Insert key before launch** 并填入 `vk07`。
+4. 底部 **Quick Search** 输入即过滤；**双击**条目编辑，**Delete** 删除。
 
 ---
 
@@ -130,177 +125,82 @@ AutoHotkeyU32.exe AHK-ToolKit.ahk
 
 ### 热键管理器
 
-在 **Hotkeys** 页以表格集中管理所有热键，列为 **类型 / 名称 / 热键 / 路径或脚本预览**，热键以 `Win + W`、`Ctrl + Alt + S` 的易读格式展示（内部以 AHK 短格式 `#w`、`^!s` 存储，由 `hkSwap` 双向转换）。
+主窗口以表格集中管理所有热键，列为 **类型 / 名称 / 热键 / 路径**，热键以 `Win + W`、`Ctrl + Alt + S` 的易读格式展示（内部以 AHK 短格式 `#w`、`^!s` 存储，由 `hkSwap` 双向转换）。
 
-**三种热键类型**
+**两种热键类型**
 
 | 类型 | 行为 |
 | :-- | :-- |
-| **Script** | 在内置 Scintilla 编辑器中直接编写脚本；触发时在独立进程中运行 |
-| **File** | 启动 `.exe` / `.ahk` 等文件；触发时先检查文件是否存在，缺失则给出提示 |
+| **File** | 启动 `.exe` / `.ahk` / 图片 / 文档等文件；触发时若文件不存在，给出提示而不是静默失败 |
 | **Folder** | 在资源管理器中打开指定文件夹 |
 
-**高级修饰（Add Hotkey 对话框）**
+> 原先的 **Script**（内嵌脚本）类型已移除：这类热键依赖已删除的 Scintilla 编辑器与解释器回退机制。需要运行脚本时，请把脚本保存为 `.ahk` 文件，再用 **File** 类型指向它。
+
+**高级选项（Add Hotkey 对话框）**
 
 | 选项 | 对应前缀 | 作用 |
 | :-- | :--: | :-- |
-| Left mod / Right mod | `<` / `>` | 仅响应左 / 右侧修饰键 |
+| 窗口条件：仅在这些窗口激活时生效 / 不在这些窗口激活时生效 | — | 逗号分隔，支持正则，**区分大小写**（正则前缀 `i)` 可忽略大小写）；运行期即时过滤，导出时转为 `#If` |
+| Left modifier only / Right modifier only | `<` / `>` | 仅响应左 / 右侧修饰键 |
 | Wildcard | `*` | 即使同时按下其他修饰键也触发 |
-| Send key to active window | `~` | 触发的同时保留按键原有功能 |
+| Pass-through | `~` | 触发的同时保留按键原有功能 |
 | Install hook | `$` | 强制使用键盘钩子 |
-| Fire when releasing key | ` UP` | 松开按键时才触发 |
+| Fire on release | ` UP` | 松开按键时才触发 |
+| **Insert key before launch** | — | 触发后先以 `{Blind}{按键}` 补发所填按键（默认 `vk07`），再启动目标 |
 
-**脚本型热键的执行机制**
+**插入按键 = `RunNoToggle`**
+
+```ahk
+; 原来需要手写：
++b::RunNoToggle("D:\音速启动软件\TC操作\博士学习.ahk")
+RunNoToggle(path){
+    SendInput {Blind}{vk07}     ; 必须最先执行：趁 Shift 还按着补发空键
+    Run, %path%
+}
+```
+
+在界面中新建热键 `Shift + B`、类型 File、路径指向该脚本，并勾选 **Insert key before launch**（填 `vk07`），即得到等价行为，无需再手写函数。`{Blind}` 保证补发按键时不改变修饰键的当前状态；`vk07` 是系统未分配的虚拟键，对应用无副作用。
+
+**热键触发流程**
 
 ```mermaid
 flowchart TD
-    K["按下已注册的热键"] --> H["HotkeyHandler 读取触发键"]
-    H --> Q["在 conf.xml 中按 key 查找节点"]
-    Q --> T{"热键类型"}
-    T -- "Script" --> S["生成临时 .code 文件<br/>注入 sec / min / hour 常量"]
-    S --> A["自动补全 ExitApp 或 GuiClose<br/>追加 Ctrl+Esc 终止键"]
-    A --> R["选择解释器并启动独立进程"]
-    T -- "File / Folder" --> F{"路径存在?"}
-    F -- "是" --> RUN["Run 目标路径"]
-    F -- "否" --> E["弹出错误提示"]
+    K["按下已注册的热键"] --> W{"窗口条件<br/>（Hotkey IfWinActive / 非激活列表）"}
+    W -- "不满足" --> X["忽略"]
+    W -- "满足" --> I{"设置了插入按键?"}
+    I -- "是" --> B["SendInput {Blind}{按键}"]
+    I -- "否" --> R
+    B --> R["Run 目标路径"]
+    R --> E{"目标存在?"}
+    E -- "否" --> M["弹出错误提示"]
 ```
 
-- 脚本模板自带 `#NoEnv`、`#SingleInstance Force`、`SetBatchLines -1`、`SendMode Input`，并预置 `sec` / `min` / `hour` 三个时间常量，方便写 `Sleep 5*sec` 这类语句。
-- 脚本中不含 `Gui` 时自动追加 `ExitApp`；含 `Gui` 但缺少 `GuiClose` 时自动补齐退出标签，避免遗留僵尸进程。
-- 每个临时脚本均附带全局终止键 **`Ctrl + Esc`**。
+- 热键回调通过 `Func.Bind` 在注册时就绑定好「路径 / 插入键 / 排除列表」，触发时不再读取 XML，既更快（插入键能在修饰键仍被按住时立即发出），也修复了旧实现里勾选「透传 `~`」后热键找不到配置节点而不执行的问题。
+- 「仅在这些窗口激活时生效」每个标题注册一份上下文；「不在这些窗口激活时生效」通过窗口组实现；两者同时设置时，后者在触发时检查。
 
 **日常操作**
 
 - **双击**条目进入编辑；**双击空白处**新建；**Delete** 键删除，支持多选。
 - 底部 **Quick Search** 同时检索名称与路径，输入即过滤。
-- 状态栏实时显示当前生效的热键与热字符串数量、程序版本。
-- 「窗口激活 / 非激活」条件字段（逗号分隔，支持正则）会随条目保存，并在**导出**为 `.ahk` 时转换为 `#IfWinActive` / `#IfWinNotActive`；运行期的条件过滤仍在路线图中（见[已知限制与路线图](#已知限制与路线图)）。
+- 状态栏实时显示当前生效的热键数量与程序版本；窗口可自由缩放，控件按 DPI 基准自适应。
+- 修改按键、条件、插入键后保存，旧热键自动注销、新热键立即注册。
 
-### 热字符串管理器
+### 界面语言与 DPI
 
-**Hotstrings** 页提供两种录入方式：
-
-- **Quick Add**：填写缩写（Expand）与展开内容（To），并通过复选框组合选项。
-- **Add Hotstring 对话框**：内置多行 Scintilla 编辑器，适合长文本与代码块。
-
-| 复选框 | 对应选项 | 说明 |
-| :-- | :--: | :-- |
-| AutoExpand | `*` | 输入缩写后立即展开，无需终止符 |
-| Do not delete typed abbreviation | `B0` | 展开时保留已输入的缩写 |
-| Trigger inside other words | `?` | 允许在单词内部触发 |
-| Send Raw | `R` | 原样发送，不翻译 `{Enter}`、`{key}` |
-| Run as Script | — | 展开内容作为 AHK 代码执行，而非文本 |
-
-**工作原理：** 热字符串并不在主进程中注册，而是由程序在 `%TEMP%\hslauncher.code` 中生成一份热字符串脚本，交给宿主进程（系统 AutoHotkey 或内置 `res/ahkl.bak`）运行。每次新增 / 修改 / 删除都会终止旧宿主并重建，因此**全程不用重启主程序**。宿主内置 `Alt + F11` 用于临时挂起全部热字符串。
-
-### Live Code 实时代码沙盒
-
-无需新建文件，直接在 **Live Code** 页编写并运行 AutoHotkey 脚本，适合验证一条语句、调试 GUI 布局，或在没有 AHK 环境的电脑上临时跑脚本。
-
-**编辑器能力**
-
-- 基于 **Scintilla**，使用专用 AHK_L 词法分析器（`LexAHKL.dll`）。
-- **语法高亮**覆盖注释（行 / 块 / 文档）、字符串、标签、热键 / 热字符串、数字、变量、对象、用户函数、指令、命令、参数、流程控制、内置函数 / 变量、按键名、转义序列与错误。
-- 7 组关键字（指令 / 命令 / 参数 / 流程控制 / 函数 / 内置变量 / 按键）读取自 `conf.xml`，可自行增删；各语法元素的配色目前由源码中的 `SetSciStyles()` 统一定义。
-- 带行号页边与**代码折叠**，支持自动换行与窗口置顶。
-- **File** 菜单提供 Open / Save / Save As（UTF-8），打开时记忆上次目录。
-
-**运行引擎（Settings → Run Code With）**
-
-| 引擎 | 用途 |
-| :-- | :-- |
-| L-Ansi / L-Unicode | 指向本机 AutoHotkey_L 的 ANSI / Unicode 可执行文件 |
-| Basic | 经典 AutoHotkey |
-| IronAHK | IronAHK 解释器 |
-
-只有在 `conf.xml` 的 `RCPaths` 中配置了路径的引擎才会在菜单中可选；当前所选引擎的路径为空时，自动回退到内置的 `res/ahkl.bak`，保证开箱即用。点击 **Run** 或使用脚本型热键时，程序会生成带统一前导（含 `sec` / `min` / `hour` 常量）的临时文件并交由所选引擎运行。
-
-**代码片段库（Snippet Library）**
-
-- 以**分组**组织；工具栏下拉框切换分组，右键菜单提供 **New / Edit / Rename / Delete**。
-- **双击**条目即把片段插入编辑器光标处；`F2` 内联重命名，`Delete` 删除。
-- 默认内置 6 个实用示例：Coord Saver（坐标记录）、Schedule Shutdown（定时关机）、Text Control – Style Ref.（文本控件样式对照）、Version Test（解释器版本检测）、Get Control Name / Get Control Hwnd（控件名称与句柄探测）。
-- 可通过 **View → Snippet Library** 显示或隐藏整个面板。
-
-### Codet：剪贴板代码检测与一键分享
-
-Codet 监听系统剪贴板，当复制的文本**命中足够多的 AHK 关键字**时，判定为 AutoHotkey 代码并引导你分享。
-
-```mermaid
-flowchart TD
-    C["复制文本"] --> D{"关键字命中数<br/>≥ 最小阈值?"}
-    D -- "否" --> X["忽略"]
-    D -- "是" --> M{"检测模式"}
-    M -- "弹窗确认" --> P["右下角滑出提示"]
-    P -- "点击 Yes" --> I["展开 #Include 为实际文件内容"]
-    I --> W["Paste Upload 窗口<br/>预览 / 编辑 / 选择服务"]
-    W --> U["上传"]
-    M -- "自动上传" --> A["按偏好设置直接上传"]
-    U --> L["分享链接写入剪贴板"]
-    A --> L
-    L --> H["写入历史记录"]
-```
-
-| 能力 | 说明 |
-| :-- | :-- |
-| 可调检测灵敏度 | 关键字列表可增删，**最小命中数**默认 5，兼顾准确率与误报 |
-| 两种模式 | **Show Popup**：从屏幕右下角滑出确认框（数秒后自动收起，可在框内直接关闭弹窗模式）；**Automatic Upload**：命中即按偏好设置上传并播放提示音 |
-| 展开 `#Include` | 通过弹窗确认上传时，自动把 `#Include` 行替换为被包含文件的实际内容，避免「忘了说还有 include」 |
-| 多服务支持 | AutoHotkey.net（支持昵称与隐私设置，公开时自动在 IRC 频道播报）；Pastebin.com（用户 Key、公开 / 私有、过期时间：永久 / 10 分钟 / 1 小时 / 1 天 / 1 个月） |
-| Paste Upload 窗口 | 带语法高亮的预览编辑器，可在上传前修改，亦可 **Save to File** 存为 `.ahk` |
-| 历史记录 | 保存最近若干条（默认 10 条）上传的时间、链接与前 4 行预览 |
-
-> [!CAUTION]
-> **Automatic Upload 不经二次确认。** 任何命中阈值的剪贴板内容都会被上传到第三方服务。涉及私有代码、凭据或内部信息时，请使用 **Show Popup** 模式或关闭 Codet。另外，`conf.xml` 以明文保存 Pastebin 用户 Key 等字段，请勿将含有真实凭据的配置文件公开提交。
-
-### CMDHelper：命令助手与论坛标签
-
-在任意文本编辑器里，把光标放在命令名上即可速查，无需切换窗口手动检索。
-
-| 功能 | 默认热键 | 行为 |
-| :-- | :--: | :-- |
-| **Open Help File** | `Ctrl + F1` | 自动选中光标处单词，调用 `hhctrl.ocx` 在本地 `AutoHotkey.chm` 中做关键字定位；失败时打开 CHM 并自动检索 |
-| **Forum Tags** | `Ctrl + F2` | 识别该单词属于变量 / 函数 / 命令，生成官方在线文档链接；在「AutoHotkey Community」窗口中直接输入 `[url=…]单词[/url]`，其他窗口则在浏览器中打开 |
-
-- 链接匹配先在对应文档页检索，失败后退化为站内搜索，并给出「结果可能不准确」的提示。
-- **Preferences → Command Helper** 提供总开关、**Use Online Help**（对应 `HelpPath@online`）、论坛标签开关，以及两个热键与 CHM 路径的设置。
-- 默认热键为 `Ctrl + F1` / `Ctrl + F2`，可改为任意修饰键与按键组合。
-
-### 论坛 BBCode 助手
-
-在窗口标题包含「AutoHotkey Community」的页面中，自动启用一组热字符串：
-
-- 成对标签自动补全并把光标停在中间：`[b]` `[i]` `[u]` `[s]` `[c]` `[list]` `[code]` `[quote]` `[youtube]` `[gist]` `[img]` `[url]`；
-- `[url=` 自动粘贴剪贴板内容作为链接地址；
-- `[color=` 弹出颜色菜单（14 种预设色 + 自定义十六进制色值）；
-- `[size=` 弹出字号菜单（Tiny / Small / Normal / Large / Huge / 自定义）。
-
-### 屏幕工具
-
-| 操作 | 说明 |
-| :-- | :-- |
-| `Shift + Alt + 左键拖拽` | 拖出半透明选区，实时显示宽高；**松开左键**即截取该区域，保存为 PNG；拖动期间按右键可取消 |
-| `Print Screen` | 全屏截图（需在偏好设置中启用） |
-
-- 截图引擎来自 `lib/sc.ahk`，底层支持整个桌面 / 活动窗口 / 客户区 / 当前显示器 / 任意矩形、可选包含鼠标指针、可缩放，并输出 BMP / JPG / PNG / GIF / TIF 或写入剪贴板。
-- **自动避让**：当活动窗口属于 Photoshop、Illustrator、3ds Max、After Effects 等设计软件，或特定游戏窗口时，选区热键自动让出，避免冲突。
-- 偏好设置中的两项开关分别控制「选区截图」与「Print Screen 截图」。
-
-> [!NOTE]
-> 当前源码中的上传环节（Imgur 接口）处于注释状态，且 `Print Screen` 处理段保留了作者本机的目标目录（`FileMove`）。使用前请参考 [需要按需修改的位置](#需要按需修改的位置) 调整。
+- **语言**：首选项 → **Language** 选择 English 或 中文。词条表集中在 `LoadZh()`，主程序以英文原文为键、`Tr()` 负责翻译（含 `{1}` `{2}` 占位符）；语言保存在 `conf.xml` 的 `Startup@lang`，切换后自动 `Reload`。新增语言只需补充一份词条表。
+- **DPI**：窗口按 96 DPI 基准写坐标，由 AutoHotkey 原生缩放（`+DPIScale`，默认开启）。`GuiControl Move`、`A_GuiWidth/Height`、`SB_SetParts`、`LV_ModifyCol` 等均在同一套逻辑坐标下工作，无需手工乘以缩放系数。
 
 ### 导入与导出
 
-**导入（File → Import/Export → Import）**
+**导入（File → Import/Export → Import Hotkeys）**
 
-- 来源可选**文件夹**（可勾选递归子文件夹）或**多个文件**；可分别选择导入热键 / 热字符串。
-- 基于正则解析，能识别带修饰前缀的热键、带选项的热字符串，以及**单行**与**多行**两种写法。
-- 解析结果先在预览列表中呈现：**双击**条目会用记事本打开来源文件并尝试定位到该条目，`Delete` 可剔除不想导入的条目；确认后点 **Accept** 才会写入配置。
+- 来源可选**文件夹**（可勾选递归子文件夹）或**多个文件**。
+- 基于正则解析**单行**的 `热键::Run, 路径` 形式（支持 `$ ~ * < >` 前缀与 `UP` 后缀、带引号路径、行尾注释）；解析结果先在预览列表中呈现，**双击**条目会用记事本打开来源文件，确认后点 **Accept** 才会写入配置；已存在的按键自动跳过并在提示中统计。
 
 **导出**
 
-- 将热键与热字符串导出为标准 `.ahk` 文件，目标文件已存在时可选择**追加**。
-- 若条目设置了窗口条件，导出时自动包裹 `#IfWinActive` / `#IfWinNotActive`。
+- 将全部热键导出为标准 `.ahk` 文件（头部自带 `SetTitleMatchMode, RegEx`），目标文件已存在时可选择**追加**。
+- 设置了插入键的热键导出为 `SendInput, {Blind}{键}` + `Run`；设置了窗口条件的热键用 `#If WinActive(...)` 包裹。
 
 ### 内置搜索
 
@@ -370,15 +270,15 @@ flowchart LR
 
 ### 系统集成与可靠性
 
-- **托盘常驻**：单击托盘图标显示 / 隐藏主窗口，悬浮提示显示版本与 ANSI / Unicode 版本。
-- **开机自启**：写入 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，可在偏好设置中随时开关。
+- **托盘常驻**：单击托盘图标显示 / 隐藏主窗口；托盘菜单含 **Reload / Suspend Hotkeys / Key History / Exit**。
+- **开机自启**：写入 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，可在首选项中随时开关。
 - **挂起与重载**：`Ctrl + F12` 挂起 / 恢复全部热键；`Ctrl + Break` 重载脚本。
+- **按键历史**：托盘菜单 **Key History** 打开 AutoHotkey 的按键历史窗口，用来排查「按键丢失 / 修饰键状态异常」。
 - **单实例**：`#SingleInstance Force`，重复启动会替换旧实例。
-- **高 DPI 自适应**：对话框与 Scintilla 控件按 `A_ScreenDPI / 96` 缩放；主窗口使用 `Attach` 实现控件随窗口自适应伸缩。
 - **配置容错**：`conf.xml` 损坏时给出清晰提示，可选择恢复默认配置（会丢失个人数据）或中止并手动修复；版本号变更时自动同步配置。
-- **自动清理**：退出时清除 `%TEMP%` 下的内置解释器副本与临时 `.code` 文件，并结束热字符串宿主进程；启动时对工作集做内存精简。
-- **版本检查与更新**：支持联网检查更新、下载压缩包、覆盖安装并重启（见下方说明）。
-- **UX 细节**：输入框内置灰色斜体占位提示（如 `e.g. btw`、`Quick Search`），聚焦时自动清除。
+- **同步加载配置**：MSXML 显式设置 `async := False`，避免「文档尚未解析完就读取节点」导致的偶发失败。
+- **自动清理**：启动时对工作集做内存精简。
+- **版本检查与更新**：支持联网检查更新（见下方说明）。
 
 > [!WARNING]
 > 自动更新的地址指向**上游** `RaptorX/AHK-ToolKit`。本分支默认关闭「启动时检查更新」（`cfu="0"`），请保持关闭，以免被上游版本覆盖本地改动。
@@ -391,92 +291,53 @@ flowchart LR
 
 | 快捷键 | 功能 |
 | :-- | :-- |
-| `` Win + ` `` | 显示 / 隐藏主窗口（可在偏好设置中更换） |
+| `` Win + ` `` | 显示 / 隐藏主窗口（可在首选项中更换） |
 | `Ctrl + F12` | 挂起 / 恢复所有热键 |
 | `Ctrl + Break` | 重载脚本 |
-| `Ctrl + F1` | CMDHelper：查询光标处单词的帮助（默认值，可自定义） |
-| `Ctrl + F2` | CMDHelper：生成论坛 `[url]` 标签 / 打开在线文档（默认值，可自定义） |
 | `Alt + CapsLock` | 内置搜索 |
-| `Shift + Alt + 左键拖拽` | 区域截图（需启用） |
-| `Print Screen` | 全屏截图（需启用） |
-| `Alt + F11` | 挂起 / 恢复热字符串宿主进程 |
-| `Ctrl + Esc` | 终止由 Live Code / 脚本型热键启动的临时脚本 |
 
 ### 主窗口内
 
 | 快捷键 | 功能 |
 | :-- | :-- |
-| `Ctrl + N` | 按当前页新建热键 / 热字符串 / 代码片段 |
-| `Ctrl + O` / `Ctrl + S` / `Ctrl + Shift + S` | 打开 / 保存 / 另存为（Live Code 页） |
-| `Ctrl + I` | 导入热键 / 热字符串 |
-| `Ctrl + P` | 偏好设置 |
+| `Ctrl + N` | 新建热键 |
+| `Ctrl + I` | 导入热键 |
+| `Ctrl + P` | 首选项 |
 | `Delete` | 删除选中条目 |
-| `F2` | 重命名选中的代码片段 |
 | `Esc` | 关闭当前对话框 / 隐藏主窗口 |
 
-### 偏好设置：关键字检索
-
-| 快捷键 | 功能 |
-| :-- | :-- |
-| `F3` | 在 Codet 关键字列表中查找下一个 |
-| `Delete` | 清除当前检索并复位 |
+> 主窗口内的 `Ctrl + N / I / P` 仅在主窗口处于激活状态时注册（`Hotkey, IfWinActive, ahk_id …`），不会影响其他程序中的同名快捷键。
 
 ---
 
 ## 配置参考
 
-全部数据保存在程序目录下的 **`conf.xml`**，结构如下（节选）：
+全部数据保存在程序目录下的 **`conf.xml`**，结构如下：
 
 ```xml
 <AHK-Toolkit version="0.9.0-161030" alwaysontop="0">
   <Options>
-    <Startup ssi="0" sww="1" smm="1" cfu="0"/>          <!-- 启动选项 -->
+    <Startup sww="1" smm="1" cfu="0" lang="zh"/>   <!-- 启动选项 + 界面语言 -->
     <MainKey ctrl="0" alt="0" shift="0" win="1">`</MainKey>
-    <SuspWndList/>
-    <Codet status="0" mode="1">                         <!-- 代码检测 -->
-      <Pastebin current="AutoHotkey.net">…</Pastebin>
-      <History max="10"/>
-      <Keywords min="5">…</Keywords>
-    </Codet>
-    <CMDHelper global="1" sci="1" forum="1" tags="1">   <!-- 命令助手 -->
-      <HelpKey ctrl="1" alt="0" shift="0" win="0">F1</HelpKey>
-      <TagsKey ctrl="1" alt="0" shift="0" win="0">F2</TagsKey>
-      <HelpPath online="0">…\AutoHotkey.chm</HelpPath>
-    </CMDHelper>
-    <LiveCode linewrap="1" highlighting="1" snplib="1"> <!-- 代码沙盒 -->
-      <RCPaths current="L-Unicode">…</RCPaths>
-      <SnippetLib current="Example Snippets">…</SnippetLib>
-      <Keywords>…</Keywords>
-      <Styles>…</Styles>                                <!-- 预留，当前配色见源码 -->
-    </LiveCode>
-    <ScrTools altdrag="0" prtscr="0">…</ScrTools>       <!-- 屏幕工具 -->
   </Options>
-  <Hotkeys count="…">
-    <hk type="Script|File|Folder" key="#W">
-      <name/> <path/> <script/> <ifwinactive/> <ifwinnotactive/>
+  <Hotkeys>
+    <hk type="File|Folder" key="#W" inskey="vk07">  <!-- inskey 可选：插入按键 -->
+      <name/> <path/> <ifwinactive/> <ifwinnotactive/>
     </hk>
   </Hotkeys>
-  <Hotstrings count="…">
-    <hs iscode="0" opts="*">
-      <expand/> <expandto/> <ifwinactive/> <ifwinnotactive/>
-    </hs>
-  </Hotstrings>
 </AHK-Toolkit>
 ```
 
 | 节点 / 属性 | 含义 |
 | :-- | :-- |
-| `Startup@ssi / sww / smm / cfu` | 启动画面 / 随 Windows 启动 / 启动后最小化 / 启动检查更新 |
+| `Startup@sww / smm / cfu` | 随 Windows 启动 / 启动后最小化 / 启动检查更新 |
+| `Startup@lang` | 界面语言：`en` 或 `zh`（缺省时按系统语言判断） |
 | `MainKey` | 主窗口全局热键（修饰键为属性，按键为节点文本） |
-| `Codet@status / mode` | 是否启用检测；`1` 弹窗确认，`2` 自动上传 |
-| `Codet/Keywords@min` | 判定为 AHK 代码所需的最小关键字命中数 |
-| `CMDHelper@global / sci / forum / tags` | 命令助手总开关 / 内置编辑器 / 论坛辅助 / 标签自动补全 |
-| `HelpPath@online` | `1` 使用在线文档，`0` 使用本地 CHM |
-| `LiveCode@linewrap / snplib` | 自动换行 / 是否显示片段库面板 |
-| `RCPaths@current` | 当前运行引擎：`L-Ansi` · `L-Unicode` · `Basic` · `IronAHK` |
-| `ScrTools@altdrag / prtscr` | 选区截图 / Print Screen 截图开关 |
 | `hk@type` / `hk@key` | 热键类型；按键（含 `$ ~ * < > ^ ! + #` 前缀与 ` UP` 后缀） |
-| `hs@iscode` / `hs@opts` | 是否为脚本型；热字符串选项 |
+| `hk@inskey` | 插入按键：触发后先发送 `{Blind}{inskey}`；缺省表示不插入 |
+| `ifwinactive` / `ifwinnotactive` | 窗口条件列表（逗号分隔，支持正则，区分大小写） |
+
+> 旧版配置（含 `Codet` / `CMDHelper` / `LiveCode` / `ScrTools` / `Hotstrings` 节点与 `type="Script"` 的热键）已迁移：仓库附带的 `conf.xml` 已完成转换；若自行升级旧配置，多余节点会被忽略，`Script` 类型的热键需改为 File 类型。
 
 ### 需要按需修改的位置
 
@@ -484,11 +345,9 @@ flowchart LR
 
 | 位置 | 内容 | 建议 |
 | :-- | :-- | :-- |
-| `AHK-ToolKit.ahk` L110–111 | `EveryThingPath`、`EveryThingDll`（Everything 目录与 `Everything32.dll`） | 改为本机实际路径，否则启动即退出 |
-| `lib/FileSearch.ahk` L39–46、L974 | 「库\文档 / 图片 / 音乐 / 视频」回退目录写死为 `C:\Users\Administrator\…` | 改用 `A_MyDocuments` 等系统变量或你的用户目录 |
-| `AHK-ToolKit.ahk` `[Hotkeys/Hotstrings]` 区段 | `Shift + 字母` 启动器、鼠标手势所调用的外部脚本与 `.ini` | 替换为自己的目标，或删除不需要的段落 |
-| `AHK-ToolKit.ahk` `PrintScreen::` 段 | `FileMove` 的目标目录 | 改成自己的保存位置，或启用上传逻辑 |
-| `conf.xml` `HelpPath` / `RCPaths` | AutoHotkey 帮助文件与各解释器路径 | 指向本机路径；留空则回退内置解释器 |
+| `AHK-ToolKit.ahk` `[Basic Script Info]` | `EveryThingPath`、`EveryThingDll`（Everything 目录与 `Everything32.dll`） | 改为本机实际路径，否则启动即退出 |
+| `lib/FileSearch.ahk` | 「库\文档 / 图片 / 音乐 / 视频」回退目录写死为 `C:\Users\Administrator\…`；界面文字仅中文 | 改用 `A_MyDocuments` 等系统变量或你的用户目录 |
+| `AHK-ToolKit.ahk` `[Hotkeys/Hotstrings]` 区段 | `Shift + 字母` 启动器、鼠标手势所调用的外部脚本与 `.ini` | 替换为自己的目标，或删除不需要的段落（`Shift + 字母` 启动器可改用界面里的「插入按键」选项管理） |
 | `conf.xml` `Hotkeys` | 作者个人的热键数据 | 删除 `conf.xml` 以重新生成 |
 
 ### 命令行参数
@@ -507,9 +366,9 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    UI["交互层<br/>托盘图标 · 全局主热键 · 主窗口（Hotkeys / Hotstrings / Live Code）<br/>偏好设置 · 导入导出 · 片段编辑 · 全局热键与鼠标手势"]
-    SVC["服务层<br/>热键调度 · 热字符串宿主 · Live Code 运行器 · Codet 监听<br/>CMDHelper · 屏幕工具 · 内置搜索"]
-    INF["基础设施层<br/>conf.xml（MSXML DOM + XSL） · Scintilla（SciLexer + LexAHKL） · HTTPRequest（WinINet）<br/>Everything IPC（WM_COPYDATA） · AHK 解释器（系统版 / 内置 ahkl.bak）"]
+    UI["交互层<br/>托盘图标 · 全局主热键 · 主窗口（热键列表）<br/>添加 / 导入 / 导出 / 首选项 / 关于 · 全局热键与鼠标手势"]
+    SVC["服务层<br/>热键调度（HkSet / HotkeyHandler） · 多语言（Tr） · 导入导出 · 内置搜索"]
+    INF["基础设施层<br/>conf.xml（MSXML DOM + XSL） · Everything IPC（WM_COPYDATA）"]
     UI --> SVC --> INF
 ```
 
@@ -517,41 +376,30 @@ flowchart TB
 
 | 主题 | 实现 |
 | :-- | :-- |
-| 配置存储 | `MSXML2.DOMDocument` 读写 XML，写回前以 XSL 样式表（`indent="yes"`）整体格式化，保持文件可读；多处操作前重新载入以保证数据一致 |
-| 编辑器 | Scintilla 5 个实例（Live Code、热键脚本、热字符串、代码片段、Paste Upload），共用同一套样式与折叠页边初始化逻辑 |
-| 窗口布局 | 以 GUI 编号区分窗口与面板：主窗口、新增热键 / 热字符串、导入、导出、偏好设置及其 7 个子面板、新增片段、关于、Paste Upload、Codet 弹窗、选区遮罩与启动画面；`Attach` 库负责缩放自适应 |
-| 进程模型 | 主进程负责 GUI 与调度；脚本型热键、Live Code、热字符串均以**独立子进程**运行，互不影响，崩溃不会拖垮主程序 |
-| 网络 | 基于 WinINet 的 `HTTPRequest` 完成 Pastebin 上传、在线文档检索与更新检查 |
+| 配置存储 | `MSXML2.DOMDocument` 同步读写 XML，写回前以 XSL 样式表（`indent="yes"`）格式化到独立文档再保存，保持文件可读 |
+| 热键引擎 | `Hotkey` 命令 + `Func.Bind` 回调；窗口条件通过 `Hotkey, IfWinActive / IfWinNotActive` 与窗口组实现 |
+| 多语言 | `Tr(英文原文, 参数…)`：英文即键，缺失词条回退为原文；中文词条表集中在 `LoadZh()` |
+| 窗口布局 | GUI 编号：1 主窗口 · 2 添加 / 编辑热键 · 4 导入 · 5 导出 · 6 首选项 · 8 关于；坐标均为 96 DPI 基准，由 AutoHotkey 缩放 |
 | 外部通信 | 通过 `WM_COPYDATA` 与 Everything 的 IPC 窗口交换查询请求与结果 |
-| 输入法 | 提供 IME 状态读写工具函数（`IME_GET` / `IME_SET` 等）与 `vk07` 空键注入技巧 |
 
 ### 目录结构
 
 ```text
 AHK-ToolKit/
-├── AHK-ToolKit.ahk        主程序（约 5,600 行）：GUI、热键 / 热字符串、Live Code、Codet、CMDHelper、屏幕工具、手势层
-├── AHK-ToolKit.exe        预编译程序
-├── conf.xml               配置与数据存储
+├── AHK-ToolKit.ahk        主程序（约 2,300 行）：热键管理、多语言、DPI 布局、导入导出、手势层
+├── AHK-ToolKit.exe        旧版预编译程序（优化前编译，需重新编译）
+├── conf.xml               配置与热键数据
 ├── Changelog.txt          上游版本变更记录
 ├── lib/
-│   ├── FileSearch.ahk     内置搜索：Everything 封装、拼音首字母、智能路径跳转、IME 工具（含 Unicode→拼音表）
-│   ├── sci.ahk            Scintilla 的 AHK 封装
-│   ├── SciLexer.dll       Scintilla 控件（32 位）
-│   ├── LexAHKL.dll        AHK_L 词法分析器（32 位）
-│   ├── scriptobj.ahk      脚本对象：命令行参数、更新、启动画面、自启动、调试
-│   ├── sc.ahk             屏幕捕获与图片格式转换
-│   ├── httprequest.ahk    HTTP 请求库
-│   ├── attach.ahk         控件随窗口自适应伸缩
+│   ├── FileSearch.ahk     内置搜索：Everything 封装、拼音首字母、智能路径跳转
+│   ├── scriptobj.ahk      脚本对象：命令行参数、更新、自启动、调试
 │   ├── klist.ahk          按键名列表生成器
 │   ├── hkswap.ahk         热键长 / 短格式互转
-│   ├── uriswap.ahk        URI 编码 / 解码
-│   ├── htmlhelp.ahk       CHM 关键字定位与论坛链接生成
-│   ├── hash.ahk           MD5 / SHA1 哈希
-│   └── talk.ahk           脚本间通信
+│   ├── hash.ahk           MD5 / SHA1 哈希（FileSearch 使用）
+│   └── talk.ahk           脚本间通信（随附，当前未被 #include）
 ├── res/
-│   ├── ahkl.bak           内置回退解释器（AutoHotkey_L 1.1.00.00）
 │   ├── AHK-TK.ico         程序图标
-│   └── img/               启动画面、关于页图片等
+│   └── img/               关于页图片
 └── resources/             位图与图标资源
 ```
 
@@ -559,16 +407,30 @@ AHK-ToolKit/
 
 | 组件 | 来源 / 作者 | 用途 |
 | :-- | :-- | :-- |
-| Scintilla（`SciLexer.dll`） | Neil Hodgson 等 | 代码编辑控件 |
-| `LexAHKL.dll` | AHK_L 社区 | AHK 语法高亮词法分析 |
-| AutoHotkey_L（`res/ahkl.bak`） | AutoHotkey 社区 | 内置回退解释器，遵循其自身许可证 |
-| `Attach` | majkinetor | 控件自适应缩放 |
-| `HTTPRequest` v2.41 | [VxE] | HTTP 通信 |
-| `AutoXYWH` | tmplinshi / toralf | 控件缩放辅助 |
-| `RunAsTask` | SKAN | 以计划任务实现免 UAC 提权（已定义，当前未被调用） |
-| `Hash` | Lazlo | MD5 / SHA1（已引入，当前未被调用） |
+| `Hash` | Lazlo | MD5 / SHA1 |
 | `talk` | Avi Aryan（MIT） | 脚本间通信（随附，当前未被 `#include`） |
 | Everything SDK / IPC | voidtools | 全盘文件检索（外部依赖，不随仓库分发） |
+
+---
+
+## 按键稳定性（Ctrl+C 偶发变成 c）
+
+「按 Ctrl+C 偶尔失灵、最后输入了字母 c」的本质是：**应用程序在收到 `C` 键按下时，认为 Ctrl 已经不在按下状态**。AutoHotkey 的钩子在系统与应用之间转发全部按键，下列几种机制都可能让 Ctrl 的状态「被改写」或「被延迟」：
+
+| 编号 | 机制 | 为什么会触发 | 本项目的处理 |
+| :--: | :-- | :-- | :-- |
+| A | **遮罩键 `#MenuMaskKey`** | 默认以 **Ctrl** 为遮罩键：每次 Win / Alt 热键松开（避免弹出开始菜单 / 菜单栏）都会向系统注入一次 Ctrl 按下 + 弹起。若恰好与你正在按住的 Ctrl+C 重叠，应用会收到多余的 Ctrl 弹起，随后的 `C` 变成单独的字母 | 已加 `#MenuMaskKey vkE8`，改用未分配的虚拟键作遮罩，不再注入 Ctrl |
+| B | **主线程繁忙 → 钩子超时** | `#If` 表达式、`KeyWait`、`RunWait`、WMI 查询都占用主线程；系统对低级钩子只给约 300 ms，超时累计后会**静默摘除钩子**，修饰键状态随之错乱 | 已加 `#IfTimeout 100`（让 AutoHotkey 先于系统放弃）；`AHK_Name()` 的 WMI 查询改为只连接一次、只做一次带过滤的查询 |
+| C | **`Send` / `SendInput` 与物理修饰键冲突** | 不带 `{Blind}` 的 `Send` 会先临时释放正在按下的修饰键，发送后再按回；与用户的 `C` 键重叠就会丢失 Ctrl。`SendInput` 还会临时卸载本脚本的键盘钩子 | 本项目的「插入按键」使用 `{Blind}`，不改变修饰键状态；原 Command Helper 中 `{Ctrl Down}…{CtrlUp}` 的强制 Ctrl 序列已随该模块删除 |
+| D | **热字符串 / `~Ctrl up` 一类监听 Ctrl 的钩子** | 热字符串需要监视所有按键并在匹配后回删 / 重发文本；对 Ctrl 抬起做「双击检测」的脚本更容易与组合键竞争 | 热字符串模块已删除；个人区段中的「双击 Ctrl」脚本保持注释状态 |
+| E | **多个脚本各自装钩子** | 手势层会拉起 `Alt_Tab.ahk`、`AutoInput.ahk` 等外部脚本，每个脚本都有自己的钩子，任何一个卡顿都会拖慢整条钩子链 | 属于外部脚本，需要单独审查（见下） |
+| F | **输入法 / 其他软件的钩子** | 输入法对 Shift 单击的处理、录屏 / 游戏栏等也会拦截修饰键 | `vk07` 补发技巧用于规避输入法的「单击 Shift」逻辑 |
+
+**排查建议**
+
+1. 复现问题时，立即从托盘菜单打开 **Key History**，查看 Ctrl 的按下 / 弹起记录里是否有**不是你按出来的**事件（标记为 `i` 的是注入事件），以及是否出现很长的延迟；
+2. 暂时退出手势层的外部脚本（`Alt_Tab.ahk`、`AutoInput.ahk`、Candy 菜单等），观察问题是否消失，以确认是否为多脚本钩子链问题；
+3. 关闭 `Alt::` 这类**单修饰键热键**与鼠标侧键脚本逐项对比：它们是遮罩键注入最频繁的来源。
 
 ---
 
@@ -576,18 +438,11 @@ AHK-ToolKit/
 
 | 状态 | 事项 |
 | :--: | :-- |
-| 待完善 | 热键 / 热字符串的 `#IfWinActive` 条件：目前**保存并支持导出**，运行期过滤尚未实现 |
-| 待完善 | Live Code 的「选中代码一键运行」（`Ctrl + F5`）：热键段已注释，`lcRun()` 接口保留，取消注释即可恢复 |
-| 待完善 | Edit / Search 菜单、Show Symbols、Zoom、Help / Documentation、Context Menu Options 等菜单项目前处于禁用状态 |
-| 待完善 | 偏好设置中 Live Code 的 *Run Code With / Keywords / Syntax Styles* 面板为占位页（显示 Under Construction），相关配置请直接编辑 `conf.xml` |
-| 待完善 | 「Suspend hotkeys on these windows」「Enable in Internal Editors」选项在界面中禁用 |
-| 待完善 | DPaste / Gist 已在配置结构中预留，界面尚未开放 |
-| 待完善 | 屏幕截图的在线上传（Imgur）当前注释；`Print Screen` 段含本机硬编码目录 |
+| 待完善 | 内置搜索（`lib/FileSearch.ahk`）的界面文字仅中文，未接入 `Tr()` |
+| 待完善 | 个人手势层（`[Hotkeys/Hotstrings]` 区段）含大量硬编码的 `D:\` 路径，需要按自己的环境修改 |
 | 注意 | Autoexec 中的自动提权代码引用了未定义的 `ShellExecute` 变量，实际不会触发 UAC；需要管理员权限时请手动「以管理员身份运行」，或改用 `lib/FileSearch.ahk` 中的 `RunAsTask()` |
-| 注意 | AutoHotkey.net、ImageShack、Imgur v2 等为 2012 年前后的第三方接口，可用性取决于服务方现状，可能已失效 |
-| 注意 | 仓库中的 `AHK-ToolKit.exe` 为预编译产物，无法保证与最新源码逐行一致；修改源码后请重新编译 |
-
-上游 Changelog 中尚未完成的计划项：为热键 / 热字符串增加窗口条件功能、修复导出时追加到已有文件的问题、修复 Live Code 对空文件名的保存、选中「Disabled」选项时隐藏子列表、按需下载 AHK_L 回退解释器。
+| 注意 | 仓库中的 `AHK-ToolKit.exe` 为优化前编译的产物，请重新编译 |
+| 注意 | 「检查更新」仍指向上游 `RaptorX/AHK-ToolKit` 仓库 |
 
 ---
 
@@ -596,9 +451,9 @@ AHK-ToolKit/
 <details>
 <summary><b>启动后立即退出，提示「Everything运行出错」</b></summary>
 
-主程序启动时会拉起 `EveryThingPath` 下的 `LoveStudy.exe`。请确认 `AHK-ToolKit.ahk` L110–111 的路径指向真实存在的 Everything 目录，并且目录中有可执行文件与 `Everything32.dll`（可将 `Everything.exe` 重命名为 `LoveStudy.exe`，或同步修改源码中的文件名）。
+主程序启动时会拉起 `EveryThingPath` 下的 `LoveStudy.exe`。请确认 `AHK-ToolKit.ahk` 中 `EveryThingPath` / `EveryThingDll` 的路径指向真实存在的 Everything 目录，并且目录中有可执行文件与 `Everything32.dll`（可将 `Everything.exe` 重命名为 `LoveStudy.exe`，或同步修改源码中的文件名）。
 
-**不需要内置搜索？** 需要同步精简以下几处（未经实机验证，修改前请备份）：
+**不需要内置搜索？** 需要同步精简以下几处（修改前请备份）：
 
 1. 删除自动执行段中的 `Gosub, EverythingStart`；
 2. 删除 `Exit:` 标签中的 `Gosub,EverythingStop`；
@@ -609,7 +464,7 @@ AHK-ToolKit/
 <details>
 <summary><b>提示「AutoHotkey 版本不兼容」</b></summary>
 
-源码运行需要 AutoHotkey_L **1.1 及以上**（v1 语法），并且不兼容 v2。可改用预编译的 `AHK-ToolKit.exe`。
+源码运行需要 AutoHotkey_L **1.1.30 及以上**（v1 语法、Unicode 版），并且不兼容 v2。
 </details>
 
 <details>
@@ -619,29 +474,23 @@ Windows 的 UIPI 机制不允许普通权限进程向高权限窗口发送输入
 </details>
 
 <details>
-<summary><b>热字符串不生效</b></summary>
-
-热字符串由 `%TEMP%\hslauncher.code` 对应的宿主进程提供。请检查：宿主是否被 `Alt + F11` 挂起；`%TEMP%` 下该文件是否存在；`Ctrl + F12` 是否处于全局挂起状态。
-</details>
-
-<details>
 <summary><b>如何备份、迁移或重置配置</b></summary>
 
-- **备份 / 迁移**：复制 `conf.xml` 即可；也可通过 **File → Import/Export → Export** 导出为 `.ahk`。
+- **备份 / 迁移**：复制 `conf.xml` 即可；也可通过 **File → Import/Export → Export Hotkeys** 导出为 `.ahk`。
 - **重置**：删除（或重命名）`conf.xml` 后重启，进入首次运行向导。
-- **配置损坏**：程序会提示并允许恢复为默认配置，但这将丢失已保存的热键与热字符串，建议平时定期备份。
+- **配置损坏**：程序会提示并允许恢复为默认配置，但这将丢失已保存的热键，建议平时定期备份。
 </details>
 
 <details>
-<summary><b>Live Code 提示找不到解释器 / 想换用其他 AutoHotkey 版本</b></summary>
+<summary><b>如何把手写的 <code>+b::RunNoToggle(...)</code> 迁移到界面</b></summary>
 
-在 `conf.xml` 的 `RCPaths` 中填写目标 `AutoHotkey.exe` 路径，随后在 **Settings → Run Code With** 中选择对应引擎。路径留空时会使用内置回退解释器。
+新建热键：按键选 **Shift + B**，类型 **File**，路径填脚本路径，在**高级选项**勾选 **Insert key before launch** 并保留 `vk07`。保存后即时生效，源码中对应的手写热键行可以删除。
 </details>
 
 <details>
 <summary><b>`Shift` 组合键与输入法冲突</b></summary>
 
-手势层的 `Shift + 字母` 启动器通过 `RunNoToggle` 在触发前注入未分配的虚拟键 `vk07`，让输入法不再把这次 `Shift` 当作「单击」而切换中英文。若你使用的输入法行为不同，可调整该函数。
+`Shift + 字母` 启动器通过先补发未分配的虚拟键 `vk07`，让输入法不再把这次 `Shift` 当作「单击」而切换中 / 英文。界面里的「插入按键」选项即是这一做法的可视化版本；若你使用的输入法行为不同，可改填其他未分配的虚拟键码。
 </details>
 
 ---
@@ -652,14 +501,14 @@ Windows 的 UIPI 机制不允许普通权限进程向高权限窗口发送输入
 
 | 版本 | 日期 | 主要变化 |
 | :-- | :-- | :-- |
-| **0.9.0-161030** | 本仓库 | 新增高 DPI 自适应界面；新增 Everything 拼音首字母内置搜索；新增鼠标 / 滚轮窗口管理手势层与 `Shift` 启动器；修复为单个按键设置热键时 `~` 前缀导致配置无法匹配的问题 |
+| **0.9.0-161030** | 本仓库 | 新增高 DPI 自适应界面；新增 Everything 拼音首字母内置搜索；新增鼠标 / 滚轮窗口管理手势层；**精简**：移除代码检测 / 命令助手 / Live Code / 屏幕工具 / 热字符串及 Scintilla 等随附组件；**新增**：中 / 英文界面、插入按键（RunNoToggle）、窗口条件运行期生效；**修复**：透传 `~` 热键无法执行、MSXML 异步加载导致的偶发读取失败、Ctrl 吞键风险（遮罩键 / 钩子超时） |
 | 0.8.1.1 | 2012-10-05 | Scintilla 控件语法高亮；修复调试三元表达式、`getparams()`、状态栏居中、编译版 `update()`；更新函数并入 `scriptobj` |
 | 0.8 | 2012-09-29 | 新增语法高亮；更新默认关键字、Scintilla 封装与 `SciLexer.dll` |
-| 0.7.7.7 | 2012-09-21 | 新增临时挂起全部热键；Live Code 记忆上次目录；启动前检查 AHK 版本与文件存在性；运行选中代码改为 `Ctrl + F5` |
-| 0.7.6.6 | 2012-07-13 | 新增屏幕工具偏好设置；启动前检测是否安装 AutoHotkey；修复检查更新期间界面不显示 |
+| 0.7.7.7 | 2012-09-21 | 新增临时挂起全部热键；Live Code 记忆上次目录；启动前检查 AHK 版本与文件存在性 |
+| 0.7.6.6 | 2012-07-13 | 新增屏幕工具偏好设置；启动前检测是否安装 AutoHotkey |
 | 0.7.5.5 | 2012-05-27 | 更新 README；修复关于窗口版本号显示 |
 
-> 0.9.0-161030 一行由源码分析归纳得出；上游完整记录见 [`Changelog.txt`](Changelog.txt)。
+> 0.9.0-161030 一行由源码分析归纳得出；上游完整记录见 [`Changelog.txt`](Changelog.txt)（其中 0.8.x 及更早的条目描述的是已移除的模块）。
 
 ---
 
@@ -667,7 +516,7 @@ Windows 的 UIPI 机制不允许普通权限进程向高权限窗口发送输入
 
 欢迎通过 Issue 与 Pull Request 参与改进。提交前建议：
 
-1. 在 Windows 上使用 32 位 AutoHotkey_L 1.1.x 实际运行验证；
+1. 在 Windows 上使用 32 位 AutoHotkey_L 1.1.30+ Unicode 版实际运行验证（含 100% 与 150% 以上缩放各一次）；
 2. 不要提交含个人路径、账号、Key 的 `conf.xml`；
 3. 个人化的手势 / 启动器改动请与通用功能分开提交，便于评审与合并。
 
