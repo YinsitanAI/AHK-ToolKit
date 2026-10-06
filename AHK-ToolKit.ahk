@@ -98,12 +98,12 @@ Gosub, EverythingStart
 global DpiScale:=A_ScreenDPI/96                     ; 系统 DPI 缩放比例（鼠标手势层仍需使用）
 global script := { base        : scriptobj
                   ,name        : "AHK-ToolKit"
-                  ,version     : "0.9.0-161030"
-                  ,author      : "RaptorX"
-                  ,email       : "graptorx@gmail.com"
-                  ,homepage    : "http://www.autohotkey.com/forum/topic61379.html#376087"
-                  ,crtdate     : "July 11, 2010"
-                  ,moddate     : "October 20, 2012"
+                  ,version     : "0.10.0"
+                  ,author      : "YinsitanAI"
+                  ,email       : "yinsitanai0803@gmail.com"
+                  ,homepage    : "https://github.com/YinsitanAI/AHK-ToolKit/"
+                  ,crtdate     : "July 11, 2020"
+                  ,moddate     : "October 06, 2026"
                   ,conf        : "conf.xml"
                   ,repo        : "YinsitanAI/AHK-ToolKit"   ; 更新源：GitHub 仓库 ...
                   ,branch      : "Main"}                    ; ... 及分支（区分大小写；本仓库默认分支为 Main，写成 main 会 404）
@@ -811,7 +811,7 @@ AboutGui(){
     Gui, 08: Add, Text, x24 y+6 w120, % Tr("Homepage")
     Gui, 08: Add, Link, x+0 yp w290 r2, % "<a href=""" script.homepage """>" script.homepage "</a>"
 
-    license := "Copyright ©2010-2012 " script.author " <GPLv3>`n`n"
+    license := "Copyright ©2020-2026 " script.author " <GPLv3>`n`n"
              . "This program is free software: you can redistribute it and/or modify it "
              . "under the terms of the GNU General Public License as published by "
              . "the Free Software Foundation, either version 3 of the License, "
@@ -1852,121 +1852,12 @@ ListHandler(){
         Gui, 01: Default
     }
 }
-;}
 
-;[Hotkeys/Hotstrings]{
+
+
 ^F12::Suspend, Toggle
 ^CtrlBreak::Reload
 
 
-
-
-;Shift组合快捷键与输入法切换的冲突解决方案
-;~ ===============================================================================================
-;~ ===============================================================================================
-;~ +z::RunNoToggle("D:\音速启动软件\TC操作\桌面.ahk")
-;~ +y::RunNoToggle("D:\常用的绿色软件\英语软件.txt")
-;~ +x::RunNoToggle("D:\音速启动软件\TC操作\桌面文件.ahk")
-;~ +w::RunNoToggle("D:\音速启动软件\TC操作\激活TC.ahk")
-;~ +u::RunNoToggle("D:\音速启动软件\U盘操作\U盘.ahk")
-;~ +t::RunNoToggle("D:\zrks键盘图.png")
-;~ +s::RunNoToggle("D:\音速启动软件\完美删除\删除.ahk")
-;~ +r::RunNoToggle("D:\音速启动软件\TC操作\绿色软件.ahk")
-;~ +q::RunNoToggle("D:\音速启动软件\TC操作\我的电脑.ahk")
-;~ +p::RunNoToggle("D:\音速启动软件\TC操作\程序文件.ahk")
-;~ +o::RunNoToggle("D:\股票操作.png")
-;~ +m::RunNoToggle("D:\MarkText图.png")
-;~ +k::RunNoToggle("D:\快捷键图.jpg")
-;~ +h::RunNoToggle("D:\音速启动软件\TC操作\H盘.ahk")
-;~ +g::RunNoToggle("D:\音速启动软件\TC操作\G盘.ahk")
-;~ +f::RunNoToggle("D:\音速启动软件\TC操作\F盘.ahk")
-;~ +e::RunNoToggle("D:\音速启动软件\TC操作\E盘.ahk")
-;~ +d::RunNoToggle("D:\音速启动软件\TC操作\D盘.ahk")
-;~ +c::RunNoToggle("D:\音速启动软件\TC操作\C盘.ahk")
-;~ +b::RunNoToggle("D:\音速启动软件\TC操作\博士学习.ahk")
-;~ +CapsLock::RunNoToggle("D:\音速启动软件\Candy\Candy菜单\Candy菜单.ahk")
-
-
-
-; 运行指定脚本，同时阻止 WindInput 把这次 Shift 当成单击（不切中英文、不弹气泡）
-;~ RunNoToggle(path)
-;~ {
-    ;~ SendInput {Blind}{vk07}                        ; 必须最先执行：趁 Shift 还按着补发空键
-    ;~ run,%path%
-    ;~ if ErrorLevel
-        ;~ MsgBox, 无法运行：`n%path%
-;~ }
-;~ ===============================================================================================
-
-
-
-
-
-
-
-
-;添加鼠标第三个和第四个按键快捷键 / 双击 Alt / ^` 翻译 / LButton+RButton 切换翻译工具 / !CapsLock 内置搜索
-;~ ===============================================================================================
-; 上述原先手写在这里的热键，现已全部改为「界面配置」（见 conf.xml 与添加热键窗口的「行为」选项）：
-;   XButton1 UP        → 窗口标题栏移屏 + 「已在运行时发送 {Click}」
-;   Alt（双击）        → 双击触发
-;   ^`                 → 带参数的普通文件热键
-;   RButton            → 「仅当按住 LButton」+「已在运行时关闭它」
-;   !CapsLock          → 类型「内置搜索」
-; 删除静态定义是为了避免与界面里同键的热键重复注册（后注册的会覆盖先注册的）。
-;~ ===============================================================================================
-
-; ===============================================================================================
-;双击Ctrl键激活搜索（已停用，仅作参考。不要用「非透传」的 Ctrl 热键实现：会吞掉 Ctrl，导致 Ctrl+C 失灵）
-; ============================================================
-;~ #InstallMouseHook            ; 让A_PriorKey能看见鼠标事件：Ctrl+点击/Ctrl+滚轮 也会被正确"作废"
-;~ lastCtrlUp := 0              ; 必须初始化！且必须放在脚本顶部自动执行段，
-                             ;~ ; 否则空串按字符串比较恒小于250 → 启动后第一次单击就误触发
-;~ ~Ctrl up::
-    ;~ if (A_PriorKey != "LControl" && A_PriorKey != "RControl")
-    ;~ {                                   ; 按住期间按过其他键(如Ctrl+C) → 作废
-        ;~ lastCtrlUp := 0
-        ;~ return
-    ;~ }
-    ;~ if (A_TickCount - lastCtrlUp < 250) ; 两次抬起间隔250ms内 → 双击成立
-    ;~ {
-        ;~ lastCtrlUp := 0                 ; 清零，防三连击重复触发
-        ;~ Gosub, FileSearchKey
-    ;~ }
-    ;~ else
-        ;~ lastCtrlUp := A_TickCount
-;~ return
-; ===============================================================================================
-;} 
-
-
-
-
-
-/*
- * * * Compile_AHK SETTINGS BEGIN * * *
-[AHK2EXE]
-Exe_File=%In_Dir%\lib\AHK-ToolKit.exe
-Alt_Bin=C:\Program Files\AutoHotkeyW\Compiler\AutoHotkeySC.bin
-[VERSION]
-Set_Version_Info=1
-File_Version=0.9.0-161030
-Inc_File_Version=0
-Internal_Name=AHK-TK
-Legal_Copyright=GNU General Public License 3.0
-Original_Filename=AutoHotkey Toolkit.exe
-Product_Name=AutoHotkey Toolkit
-Product_Version=0.9.0-161030
-[ICONS]
-Icon_1=%In_Dir%\res\AHK-TK.ico
-Icon_2=%In_Dir%\res\AHK-TK.ico
-Icon_3=%In_Dir%\res\AHK-TK.ico
-Icon_4=%In_Dir%\res\AHK-TK.ico
-Icon_5=%In_Dir%\res\AHK-TK.ico
-Icon_6=%In_Dir%\res\AHK-TK.ico
-Icon_7=%In_Dir%\res\AHK-TK.ico
-
-* * * Compile_AHK SETTINGS END * * *
-*/
 
 #include <FileSearch>
