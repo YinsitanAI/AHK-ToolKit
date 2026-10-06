@@ -174,5 +174,85 @@
 			<name>Tail启动与关闭</name>
 			<path>D:\音速启动软件\ZeroTail功能脚本\Tail启动与关闭.ahk</path>
 		</hk>
+		<hk type="File" key="+Z" inskey="vk07">
+			<name>TC桌面</name>
+			<path>D:\音速启动软件\TC操作\桌面.ahk</path>
+		</hk>
+		<hk type="File" key="+X" inskey="vk07">
+			<name>TC桌面文件</name>
+			<path>D:\音速启动软件\TC操作\桌面文件.ahk</path>
+		</hk>
+		<hk type="File" key="+Y" inskey="vk07">
+			<name>TC英语软件</name>
+			<path>D:\常用的绿色软件\英语软件.txt</path>
+		</hk>
+		<hk type="File" key="+W" inskey="vk07">
+			<name>激活TC</name>
+			<path>D:\音速启动软件\TC操作\激活TC.ahk</path>
+		</hk>
+		<hk type="File" key="+U" inskey="vk07">
+			<name>TC移动U盘</name>
+			<path>D:\音速启动软件\U盘操作\U盘.ahk</path>
+		</hk>
+		<hk type="File" key="+T" inskey="vk07">
+			<name>TC键盘图</name>
+			<path>D:\zrks键盘图.png</path>
+		</hk>
+		<hk type="File" key="+S" inskey="vk07">
+			<name>TC删除</name>
+			<path>D:\音速启动软件\完美删除\删除.ahk</path>
+		</hk>
+		<hk type="File" key="+R" inskey="vk07">
+			<name>TC绿色软件</name>
+			<path>D:\音速启动软件\TC操作\绿色软件.ahk</path>
+		</hk>
+		<hk type="File" key="+Q" inskey="vk07">
+			<name>TC我的电脑</name>
+			<path>D:\音速启动软件\TC操作\我的电脑.ahk</path>
+		</hk>
+		<hk type="File" key="+P" inskey="vk07">
+			<name>TC程序文件</name>
+			<path>D:\音速启动软件\TC操作\程序文件.ahk</path>
+		</hk>
+		<hk type="File" key="+M" inskey="vk07">
+			<name>TC绘图MarkDown</name>
+			<path>D:\MarkText图.png</path>
+		</hk>
+		<hk type="File" key="+K" inskey="vk07">
+			<name>TC快捷键图</name>
+			<path>D:\快捷键图.jpg</path>
+		</hk>
+		<hk type="File" key="+H" inskey="vk07">
+			<name>TC磁盘H</name>
+			<path>D:\音速启动软件\TC操作\H盘.ahk</path>
+		</hk>
+		<hk type="File" key="+G" inskey="vk07">
+			<name>TC磁盘G</name>
+			<path>D:\音速启动软件\TC操作\G盘.ahk</path>
+		</hk>
+		<hk type="File" key="+F" inskey="vk07">
+			<name>TC磁盘F</name>
+			<path>D:\音速启动软件\TC操作\F盘.ahk</path>
+		</hk>
+		<hk type="File" key="+E" inskey="vk07">
+			<name>TC磁盘E</name>
+			<path>D:\音速启动软件\TC操作\E盘.ahk</path>
+		</hk>
+		<hk type="File" key="+D" inskey="vk07">
+			<name>TC磁盘D</name>
+			<path>D:\音速启动软件\TC操作\D盘.ahk</path>
+		</hk>
+		<hk type="File" key="+C" inskey="vk07">
+			<name>TC磁盘C</name>
+			<path>D:\音速启动软件\TC操作\C盘.ahk</path>
+		</hk>
+		<hk type="File" key="+B" inskey="vk07">
+			<name>TC博士学习</name>
+			<path>D:\音速启动软件\TC操作\博士学习.ahk</path>
+		</hk>
+		<hk type="File" key="+CapsLock" inskey="vk07">
+			<name>Candy菜单</name>
+			<path>D:\音速启动软件\Candy\Candy菜单\Candy菜单.ahk</path>
+		</hk>
 	</Hotkeys>
 </AHK-Toolkit>

@@ -1640,45 +1640,39 @@ ListHandler(){
 ;Shift组合快捷键与输入法切换的冲突解决方案
 ;~ ===============================================================================================
 ;~ ===============================================================================================
-+z::RunNoToggle("D:\音速启动软件\TC操作\桌面.ahk")
-+y::RunNoToggle("D:\常用的绿色软件\英语软件.txt")
-+x::RunNoToggle("D:\音速启动软件\TC操作\桌面文件.ahk")
-+w::RunNoToggle("D:\音速启动软件\TC操作\激活TC.ahk")
-+u::RunNoToggle("D:\音速启动软件\U盘操作\U盘.ahk")
-+t::RunNoToggle("D:\zrks键盘图.png")
-+s::RunNoToggle("D:\音速启动软件\完美删除\删除.ahk")
-+r::RunNoToggle("D:\音速启动软件\TC操作\绿色软件.ahk")
-+q::RunNoToggle("D:\音速启动软件\TC操作\我的电脑.ahk")
-+p::RunNoToggle("D:\音速启动软件\TC操作\程序文件.ahk")
-+o::RunNoToggle("D:\股票操作.png")
-+m::RunNoToggle("D:\MarkText图.png")
-+k::RunNoToggle("D:\快捷键图.jpg")
-+h::RunNoToggle("D:\音速启动软件\TC操作\H盘.ahk")
-+g::RunNoToggle("D:\音速启动软件\TC操作\G盘.ahk")
-+f::RunNoToggle("D:\音速启动软件\TC操作\F盘.ahk")
-+e::RunNoToggle("D:\音速启动软件\TC操作\E盘.ahk")
-+d::RunNoToggle("D:\音速启动软件\TC操作\D盘.ahk")
-+c::RunNoToggle("D:\音速启动软件\TC操作\C盘.ahk")
-+b::RunNoToggle("D:\音速启动软件\TC操作\博士学习.ahk")
-+CapsLock::RunNoToggle("D:\音速启动软件\Candy\Candy菜单\Candy菜单.ahk")
+;~ +z::RunNoToggle("D:\音速启动软件\TC操作\桌面.ahk")
+;~ +y::RunNoToggle("D:\常用的绿色软件\英语软件.txt")
+;~ +x::RunNoToggle("D:\音速启动软件\TC操作\桌面文件.ahk")
+;~ +w::RunNoToggle("D:\音速启动软件\TC操作\激活TC.ahk")
+;~ +u::RunNoToggle("D:\音速启动软件\U盘操作\U盘.ahk")
+;~ +t::RunNoToggle("D:\zrks键盘图.png")
+;~ +s::RunNoToggle("D:\音速启动软件\完美删除\删除.ahk")
+;~ +r::RunNoToggle("D:\音速启动软件\TC操作\绿色软件.ahk")
+;~ +q::RunNoToggle("D:\音速启动软件\TC操作\我的电脑.ahk")
+;~ +p::RunNoToggle("D:\音速启动软件\TC操作\程序文件.ahk")
+;~ +o::RunNoToggle("D:\股票操作.png")
+;~ +m::RunNoToggle("D:\MarkText图.png")
+;~ +k::RunNoToggle("D:\快捷键图.jpg")
+;~ +h::RunNoToggle("D:\音速启动软件\TC操作\H盘.ahk")
+;~ +g::RunNoToggle("D:\音速启动软件\TC操作\G盘.ahk")
+;~ +f::RunNoToggle("D:\音速启动软件\TC操作\F盘.ahk")
+;~ +e::RunNoToggle("D:\音速启动软件\TC操作\E盘.ahk")
+;~ +d::RunNoToggle("D:\音速启动软件\TC操作\D盘.ahk")
+;~ +c::RunNoToggle("D:\音速启动软件\TC操作\C盘.ahk")
+;~ +b::RunNoToggle("D:\音速启动软件\TC操作\博士学习.ahk")
+;~ +CapsLock::RunNoToggle("D:\音速启动软件\Candy\Candy菜单\Candy菜单.ahk")
 
 
 
 ; 运行指定脚本，同时阻止 WindInput 把这次 Shift 当成单击（不切中英文、不弹气泡）
-RunNoToggle(path)
-{
-    SendInput {Blind}{vk07}                        ; 必须最先执行：趁 Shift 还按着补发空键
-    run,%path%
-    if ErrorLevel
-        MsgBox, 无法运行：`n%path%
-}
+;~ RunNoToggle(path)
+;~ {
+    ;~ SendInput {Blind}{vk07}                        ; 必须最先执行：趁 Shift 还按着补发空键
+    ;~ run,%path%
+    ;~ if ErrorLevel
+        ;~ MsgBox, 无法运行：`n%path%
+;~ }
 ;~ ===============================================================================================
-
-
-
-
-
-
 
 
 
@@ -1716,357 +1710,6 @@ else
 	Click
 return
 
-XButton2 UP::
-IniRead, This_Key, D:\音速启动软件\Alt Tab\Alt_Tab_Settings.ini, Press_key,This_Hotkey
-IniWrite, *, D:\音速启动软件\Alt Tab\Alt_Tab_Settings.ini, Press_key,This_Hotkey
-if (This_Key = "XButton2")
-    Bstate = 1
-if Bstate = 1
-{
-   ;关闭亮度调节的所需的服务
-    NVDisplayService:="NVDisplay.ContainerLocalSystem"
-    PIDCloseString=sc STOP  %NVDisplayService%
-	StdoutToVar_CreateProcess(PIDCloseString)
-    Bstate := 0
-    return
-}
-	RunWait, D:\音速启动软件\Alt Tab\Alt_Tab.ahk
-
-return
-return
-;~ ~MButton & WheelUp::
-    ;~ KeyWait, MButton, U
-          ;~ Run, D:\音速启动软件\Alt Tab\Alt_Tab.exe
-    ;~ ;msgbox, %statem%
- ;~ return
-
-; 查找「命令行中包含指定脚本名」的 AutoHotkey 进程，返回 PID（未找到返回 0）。
-; 优化：原实现每次调用都新建两次 WMI 连接、遍历进程的全部属性并对每个进程调用 WinGetTitle，
-; 在鼠标侧键松开（XButton1 UP）等高频场景下会同步阻塞主线程数百毫秒到数秒，
-; 期间键盘/鼠标钩子无法被及时处理，是造成「Ctrl 状态丢失 → Ctrl+C 变成输入 c」的风险点之一。
-; 现在：WMI 连接只建立一次并缓存，只做一次带过滤条件的查询，只读取 PID 与命令行两个属性。
-AHK_Name(A_Name:="")
-{
-	static psvc
-	if !psvc
-		psvc := ComObjGet("winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2")
-	for pobj in psvc.ExecQuery("SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name='AutoHotkey.exe' OR Name='InternalAHK.exe'")
-		if InStr(pobj.CommandLine, A_Name)
-			return pobj.ProcessId
-	return 0
-}
-return
-
-
-
-;添加鼠标滚筒左右键按键快捷键 
-;~ ===============================================================================================
-~WheelLeft::
-  IfGreater, key_pres, 2, return
-  key_pres++
-  If (key_pres=1)
-      T1 :=A_TickCount
-  If (key_pres=2)
-      T2 :=A_TickCount
-  IfEqual, key_pres, 1, SetTimer, KeypC, -250
-return
-KeypC:
-  T:=T2-T1
-  MouseGetPos, , , id, Control
-  WinGetTitle, title, ahk_id %id%
-  WinGetClass, class, ahk_id %id%
-  If key_pres = 1
-    {
-      If (title="Program Manager" or  class= "#32769" )
-          Run, D:\音速启动软件\Alt Tab\Alt_Tab.ahk
-      Else
-	  {
-			WinMinimize, ahk_id %id%
-			Old_id:=id
-	  }
-      ;~ msgbox,一次
-    }
-  Else If key_pres = 2
-    {
-      If (T>120)
-        {
-          If (title="Program Manager" or  class= "#32769" )
-            {
-			  WinGetTitle, title, ahk_id %Old_id%
-              If(DllCall("IsIconic", UInt, Old_id))                     ; check if minimized
-              { 
-                DllCall("ShowWindow", UInt, Old_id, UInt, 9) ; 9=SW_RESTORE
-              }
-        }
-      Else
-        {
-         If (class= "TscShellContainerClass" )                      ;~ 远程桌面窗口特殊处理
-            Run,D:\音速启动软件\远程桌面\远程连接.ahk
-         else
-         {
-            WinGet, wid_MinMax, MinMax, ahk_id %id%
-            If wid_MinMax =1
-              WinRestore, ahk_id %id%
-            Else If wid_MinMax =0
-              WinMaximize,ahk_id %id%
-         }
-
-          ;~ msgbox,两次
-        }
-    }
-  Else
-    {
-      gosub,长按
-    }
-  }
-Else If key_pres > 2
-  {
-    gosub,长按
-  }
-key_pres = 0
-return
-
-长按:
-  If (title<>"Program Manager"or  class<> "#32769")
-      WinClose,ahk_id %id%
- sleep,100
-  ;~ MsgBox,长按
-return
-;~ ===============================================================================================
-
-
-
-;鼠标滚筒调节屏幕亮度
-; ===============================================================================================
-#If GetKeyState("XButton2", "P") 
-WheelDown:: 
-NVDisplayService :="NVDisplay.ContainerLocalSystem"
-ServiceState:=Service_State(NVDisplayService)
-if (ServiceState=1)
-{
-    PIDStartString=sc START  %NVDisplayService%
-	StdoutToVar_CreateProcess(PIDStartString)
-    Process, Wait , NVDisplay.Container.exe,3
-}
-MoveBrightness(1)
-Bstate:=1
-Return
-
-Wheelup:: 
-NVDisplayService :="NVDisplay.ContainerLocalSystem"
-ServiceState:=Service_State(NVDisplayService)
-if (ServiceState=1)
-{
-    PIDStartString=sc START  %NVDisplayService%
-	StdoutToVar_CreateProcess(PIDStartString)
-    Process, Wait , NVDisplay.Container.exe,3
-}
-MoveBrightness(-1)
-Bstate:=1
-Return
-
-LButton::
-Run,D:\音速启动软件\逻辑鼠标驱动.ahk
-Bstate:=1
-Return
-
-MoveBrightness(IndexMove)
-{
-
-	VarSetCapacity(SupportedBrightness, 256, 0)
-	VarSetCapacity(SupportedBrightnessSize, 4, 0)
-	VarSetCapacity(BrightnessSize, 4, 0)
-	VarSetCapacity(Brightness, 3, 0)
-	
-	hLCD := DllCall("CreateFile"
-	, Str, "\\.\LCD"
-	, UInt, 0x80000000 | 0x40000000 ;Read | Write
-	, UInt, 0x1 | 0x2  ; File Read | File Write
-	, UInt, 0
-	, UInt, 0x3        ; open any existing file
-	, UInt, 0
-	, UInt, 0)
-	
-	if hLCD != -1
-	{
-		DevVideo := 0x00000023, BuffMethod := 0, Fileacces := 0
-		  NumPut(0x03, Brightness, 0, "UChar")      ; 0x01 = Set AC, 0x02 = Set DC, 0x03 = Set both
-		  NumPut(0x00, Brightness, 1, "UChar")      ; The AC brightness level
-		  NumPut(0x00, Brightness, 2, "UChar")      ; The DC brightness level
-		DllCall("DeviceIoControl"
-		  , UInt, hLCD
-		  , UInt, (DevVideo<<16 | 0x126<<2 | BuffMethod<<14 | Fileacces) ; IOCTL_VIDEO_QUERY_DISPLAY_BRIGHTNESS
-		  , UInt, 0
-		  , UInt, 0
-		  , UInt, &Brightness
-		  , UInt, 3
-		  , UInt, &BrightnessSize
-		  , UInt, 0)
-		
-		DllCall("DeviceIoControl"
-		  , UInt, hLCD
-		  , UInt, (DevVideo<<16 | 0x125<<2 | BuffMethod<<14 | Fileacces) ; IOCTL_VIDEO_QUERY_SUPPORTED_BRIGHTNESS
-		  , UInt, 0
-		  , UInt, 0
-		  , UInt, &SupportedBrightness
-		  , UInt, 256
-		  , UInt, &SupportedBrightnessSize
-		  , UInt, 0)
-		
-		ACBrightness := NumGet(Brightness, 1, "UChar")
-		ACIndex := 0
-		DCBrightness := NumGet(Brightness, 2, "UChar")
-		DCIndex := 0
-		BufferSize := NumGet(SupportedBrightnessSize, 0, "UInt")
-		MaxIndex := BufferSize-1
-
-		Loop, %BufferSize%
-		{
-		ThisIndex := A_Index-1
-		ThisBrightness := NumGet(SupportedBrightness, ThisIndex, "UChar")
-		if ACBrightness = %ThisBrightness%
-			ACIndex := ThisIndex
-		if DCBrightness = %ThisBrightness%
-			DCIndex := ThisIndex
-		}
-		
-		if DCIndex >= %ACIndex%
-		  BrightnessIndex := DCIndex
-		else
-		  BrightnessIndex := ACIndex
-
-		BrightnessIndex += IndexMove
-		
-		if BrightnessIndex > %MaxIndex%
-		   BrightnessIndex := MaxIndex
-		   
-		if BrightnessIndex < 0
-		   BrightnessIndex := 0
-
-		NewBrightness := NumGet(SupportedBrightness, BrightnessIndex, "UChar")
-		
-		NumPut(0x03, Brightness, 0, "UChar")               ; 0x01 = Set AC, 0x02 = Set DC, 0x03 = Set both
-                NumPut(NewBrightness, Brightness, 1, "UChar")      ; The AC brightness level
-                NumPut(NewBrightness, Brightness, 2, "UChar")      ; The DC brightness level
-		
-		DllCall("DeviceIoControl"
-			, UInt, hLCD
-			, UInt, (DevVideo<<16 | 0x127<<2 | BuffMethod<<14 | Fileacces) ; IOCTL_VIDEO_SET_DISPLAY_BRIGHTNESS
-			, UInt, &Brightness
-			, UInt, 3
-			, UInt, 0
-			, UInt, 0
-			, UInt, 0
-			, Uint, 0)
-		DllCall("CloseHandle", UInt, hLCD)
-	}
-  }
-  StdoutToVar_CreateProcess(sCmd, bStream="", sDir="", sInput="")
-{
-   bStream=   ; not implemented
-   DllCall("CreatePipe","Ptr*",hStdInRd,"Ptr*",hStdInWr,"Uint",0,"Uint",0)
-   DllCall("CreatePipe","Ptr*",hStdOutRd,"Ptr*",hStdOutWr,"Uint",0,"Uint",0)
-   DllCall("SetHandleInformation","Ptr",hStdInRd,"Uint",1,"Uint",1)
-   DllCall("SetHandleInformation","Ptr",hStdOutWr,"Uint",1,"Uint",1)
-   if A_PtrSize=4
-    {
-      VarSetCapacity(pi, 16, 0)
-      sisize:=VarSetCapacity(si,68,0)
-      NumPut(sisize,    si,  0, "UInt")
-      NumPut(0x100,     si, 44, "UInt")
-      NumPut(hStdInRd , si, 56, "Ptr")
-      NumPut(hStdOutWr, si, 60, "Ptr")
-      NumPut(hStdOutWr, si, 64, "Ptr")
-    }
-   else if A_PtrSize=8
-    {
-      VarSetCapacity(pi, 24, 0)
-      sisize:=VarSetCapacity(si,96,0)
-      NumPut(sisize,    si,  0, "UInt")
-      NumPut(0x100,     si, 60, "UInt")
-      NumPut(hStdInRd , si, 80, "Ptr")
-      NumPut(hStdOutWr, si, 88, "Ptr")
-      NumPut(hStdOutWr, si, 96, "Ptr")
-    }
-     DllCall("CreateProcess", "Uint", 0, "Ptr", &sCmd, "Uint", 0, "Uint", 0, "Int", True, "Uint", 0x08000000, "Uint", 0, "Ptr", sDir ? &sDir : 0, "Ptr", &si, "Ptr", &pi)
-     DllCall("CloseHandle","Ptr",NumGet(pi,0))
-     DllCall("CloseHandle","Ptr",NumGet(pi,A_PtrSize))
-     DllCall("CloseHandle","Ptr",hStdOutWr)
-     DllCall("CloseHandle","Ptr",hStdInRd)
-     If   sInput <>
-      FileOpen(hStdInWr, "h", "UTF-8").Write(sInput)
-    DllCall("CloseHandle","Ptr",hStdInWr)
-    VarSetCapacity(sTemp,4095)
-   nSize:=0
-   loop
-    {
-      result:=DllCall("Kernel32.dll\ReadFile", "Uint", hStdOutRd,  "Ptr", &sTemp, "Uint", 4095,"UintP", nSize,"Uint", 0)
-      if (result="0")
-         break
-      else
-         sOutput:= sOutput . StrGet(&sTemp,nSize,"cp936")
-    }
-   DllCall("CloseHandle","Ptr",hStdOutRd)
-   Return,sOutput
-}
-
-
-Service_State(ServiceName)
-{ ; Return Values
-; SERVICE_STOPPED (1) : The service is not running.
-; SERVICE_START_PENDING (2) : The service is starting.
-; SERVICE_STOP_PENDING (3) : The service is stopping.
-; SERVICE_RUNNING (4) : The service is running.
-; SERVICE_CONTINUE_PENDING (5) : The service continue is pending.
-; SERVICE_PAUSE_PENDING (6) : The service pause is pending.
-; SERVICE_PAUSED (7) : The service is paused.
-    SCM_HANDLE := DllCall("advapi32\OpenSCManagerW"
-                        , "Int", 0 ;NULL for local
-                        , "Int", 0
-                        , "UInt", 0x1) ;SC_MANAGER_CONNECT (0x0001)
-                            
-    if !(SC_HANDLE := DllCall("advapi32\OpenServiceW"
-                            , "UInt", SCM_HANDLE
-                            , "Str", ServiceName
-                            , "UInt", 0x4)) ;SERVICE_QUERY_STATUS (0x0004)
-        result := -4 ;Service Not Found
-    VarSetCapacity(SC_STATUS, 28, 0) ;SERVICE_STATUS Struct
-    if !result
-        result := !DllCall("advapi32\QueryServiceStatus"
-                         , "UInt", SC_HANDLE
-                         , "UInt", &SC_STATUS)
-                         ? False : NumGet(SC_STATUS, 4) ;-1 or dwCurrentState
-    DllCall("advapi32\CloseServiceHandle", "UInt", SC_HANDLE)
-    DllCall("advapi32\CloseServiceHandle", "UInt", SCM_HANDLE)
-    return result
-}
-  
-Return
-
-#If 
-
-
-;鼠标滚筒调节声音大小
-; ===============================================================================================
-#If GetKeyState("XButton1", "P") 
-WheelDown:: 
-SoundSet +1
-Vstate:=1
-Return
-
-Wheelup:: 
-SoundSet -1
-Vstate:=1
-Return
-
-LButton::
-Run,D:\音速启动软件\JRiver加播放列表.ahk
-Vstate:=1
-Return
-#If 
-; ===============================================================================================
-
-
 
 
 ; ===============================================================================================
@@ -2098,179 +1741,25 @@ Return
 
 
 ; ===============================================================================================
-;双击Alt键切换输入法模式
+;双击Alt打开密码输入软件
 Alt::
 KeyWait, Alt
 KeyWait, Alt, D, T0.10
 If ErrorLevel <> 1
     run,D:\音速启动软件\自动输入\AutoInput.ahk
-
 return
 ; ===============================================================================================
+
 
 
 
 ; ===============================================================================================
 ;双击CapsLock键快速查询翻译字典
 
-;~CapsLock::
-;If (A_priorHotkey = "~CapsLock" and A_TimeSincePriorHotkey < 120 and !AHK_Name("一键翻译.ahk"))
-;{
-;       run D:\常用的绿色软件\AutoHotKey\AutoHotkey.exe D:\音速启动软件\一键翻译\一键翻译.ahk 1
-;}
-;return
-
 ^`::
    run D:\常用的绿色软件\AutoHotKey\AutoHotkey.exe D:\音速启动软件\一键翻译\一键翻译.ahk 1
 return
 
-
-
-
-; ===============================================================================================
-
-; ===============================================================================================
-#If mm=1  ; !!! works on ALL next hotkeys,标志特殊情况
-~RButton Up::
-        SetKeyDelay,0
-        Send {Escape}
-        loop 5
-        {
-            Send {Escape}
-            sleep,1
-        }
-     mm:=0
-Return
-#If 
-;窗口缩小
-#If GetKeyState("RButton", "P")  ; !!! works on ALL next hotkeys
-WheelDown:: 
-  SetTimer, MouseMoveWinEnable,off
-  mm:=1        ; !!!标志特殊情况
-  SetWinDelay,0
-  CoordMode,Mouse
-  MouseGetPos,KDE_X1,KDE_Y1,KDE_id
-  WinGetTitle, WinTitle, ahk_id %KDE_id%
-  if (WinTitle="Program Manager")
-    return
-  WinGet,KDE_Win,MinMax,ahk_id %KDE_id%
-  If (KDE_Win=1)
-  {
-        ; --
-        ;鼠标移动带动窗口移动开启
-        WinRestore, ahk_id %KDE_id%
-            ; Get the initial window position.
-        WinGetPos,KDE_WinX1,KDE_WinY1,KDE_WinW,KDE_WinH,ahk_id %KDE_id%
-        SetTimer, MouseMoveWinEnable, 1
-  }
-
- If (KDE_Win=0)
- {
-    WinMinimize, ahk_id %KDE_id%
-    IniWrite,%KDE_id%, D:\飞速启动软件\Alt_Tab_Settings.ini, WinIDMsg,WinMinimizeID
- }
-Return
-
-; 鼠标移动带动窗口移动功能，在程序定义段由定时器启动该功能
- MouseMoveWinEnable:
-    CoordMode,Mouse
-    GetKeyState,KDE_Button,RButton,P ; Break if button has been released.
-    If KDE_Button = U
-    {
-        SetTimer, MouseMoveWinEnable,off
-        return
-    }
-    MouseGetPos,KDE_X2,KDE_Y2 ; Get the current mouse position.
-    KDE_X2 -= KDE_X1 ; Obtain an offset from the initial mouse position.
-    KDE_Y2 -= KDE_Y1
-    KDE_WinX2 := (KDE_WinX1 + KDE_X2) ; Apply this offset to the window position.
-    KDE_WinY2 := (KDE_WinY1 + KDE_Y2)
-    WinMove,ahk_id %KDE_id%,,%KDE_WinX2%,%KDE_WinY2% ; Move the window to the new position.
- return
-
-
-;窗口放大
-Wheelup:: 
- SetTimer, MouseMoveWinEnable,off
-  mm:=1 
-  SetWinDelay,0
-  CoordMode,Mouse
-  MouseGetPos,KDE_X1,KDE_Y1,KDE_id
-  WinGetTitle, WinTitle, ahk_id %KDE_id%
-  if (WinTitle="Program Manager")
-        IniRead, KDE_id, D:\飞速启动软件\Alt_Tab_Settings.ini, WinIDMsg, WinMinimizeID
-  WinGet,KDE_Win,MinMax,ahk_id %KDE_id%
-  if(KDE_Win=-1)
-  {
-        ;鼠标移动带动窗口移动开启
-        WinRestore, ahk_id %KDE_id%
-            ; Get the initial window position.
-        WinGetPos,KDE_WinX1,KDE_WinY1,KDE_WinW,KDE_WinH,ahk_id %KDE_id%
-        SetTimer, MouseMoveWinEnable, on
-  }
-
-  if(KDE_Win=0)
-        WinMaximize ,ahk_id %KDE_id%
-return
-
-
-;窗口移动调整大小
-MButton::
-     mm:=1 
-     SetWinDelay,0
-     CoordMode,Mouse
-     MouseGetPos,KDE_X1,KDE_Y1,KDE_id
-     WinGetTitle, WinTitle, ahk_id %KDE_id%
-     if (WinTitle<>"Program Manager")
-     {
-        WinRestore,ahk_id %KDE_id%
-      ; Get the initial window position and size.int", &wp)
-        If KDE_Win
-            WinGetPos,KDE_WinX1,KDE_WinY1,KDE_WinW,KDE_WinH,ahk_id %KDE_id%
-        WinGetPos,KDE_WinX2,KDE_WinY2,KDE_WinW1,KDE_WinH1,ahk_id %KDE_id%
-        ; Define the window region the mouse is currently in.nd Left, Down and Right.
-        If (KDE_X1 < KDE_WinX1 + KDE_WinW / 2)
-            KDE_WinLeft := 1
-        ; The four regions are Up and Left, Up and Right, Down a
-        Else
-            KDE_WinLeft := -1
-        If (KDE_Y1 < KDE_WinY1 + KDE_WinH / 2)
-            KDE_WinUp := 1
-        Else
-            KDE_WinUp := -1
-        Loop
-        {
-            GetKeyState,KDE_Button,RButton,P ; Break if button has been released.
-            If KDE_Button = U
-                break
-            MouseGetPos,KDE_X2,KDE_Y2 ; Get the current mouse position.
-            ; Get the current window position and size.
-            WinGetPos,KDE_WinX1,KDE_WinY1,KDE_WinW,KDE_WinH,ahk_id %KDE_id%
-            KDE_X2 -= KDE_X1 ; Obtain an offset from the initial mouse position.
-            KDE_Y2 -= KDE_Y1
-            ; Then, act according to the defined region.
-            WinMove,ahk_id %KDE_id%,, KDE_WinX1 + (KDE_WinLeft+1)/2*KDE_X2  ; X of resized window
-                            , KDE_WinY1 +   (KDE_WinUp+1)/2*KDE_Y2  ; Y of resized window
-                            , KDE_WinW  -     KDE_WinLeft  *KDE_X2  ; W of resized window
-                            , KDE_WinH  -       KDE_WinUp  *KDE_Y2  ; H of resized window
-            KDE_X1 := (KDE_X2 + KDE_X1) ; Reset the initial position for the next iteration.
-            KDE_Y1 := (KDE_Y2 + KDE_Y1)
-        }
-     }
-return
-
-
-LButton::
-  mm:=1        ; !!!标志特殊情况
-  SetWinDelay,2
-  CoordMode,Mouse
-  MouseGetPos,KDE_X1,KDE_Y1,KDE_id
-  WinGetTitle, WinTitle, ahk_id %KDE_id%
-  if (WinTitle<>"Program Manager")
-     WinMinimize,ahk_id %KDE_id%
-return
-
-#If 
 
  ; 激活翻译工具
 #If GetKeyState("LButton", "P")  ; !!! works on ALL next hotkeys
@@ -2290,10 +1779,8 @@ return
 ; ===============================================================================================
 ;} 
 
-; 个人化的窗口专用热键（保持原样）
-#ifwinactive, .*Nikronius
-pgDn::Send !{Space}n
-#ifwinactive
+
+
 
 
 /*
