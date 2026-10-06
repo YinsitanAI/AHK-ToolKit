@@ -463,7 +463,19 @@ LoadZh(){
         Please select the key that you want to use as a hotkey.|请选择要作为热键使用的按键。
         Please enter the file or folder path to launch.|请输入要启动的文件或文件夹路径。
         Left and right modifier cannot be checked together.|左侧与右侧修饰键不能同时勾选。
-        A hotkey with this key already exists.|该按键的热键已存在。
+        A hotkey with this key already exists:`n{1}|已存在相同的热键（~ / $ 前缀不同或修饰键顺序不同也视为同一个热键）：`n{1}
+        This hotkey is reserved by the program:`n{1}|该热键已被程序占用：`n{1}
+        File Search|内置搜索
+        Behavior|行为
+        Double press: fire only when pressed twice within|双击触发：两次按键间隔不超过
+        Only while holding|仅当按住
+        If target is already running|目标已在运行时
+        Run again|再次运行
+        Do nothing|不处理
+        Close it|关闭它
+        Send keys|发送按键
+        On a window title bar: move the window to the adjacent monitor|鼠标在窗口标题栏时：把窗口移到相邻显示器
+        Program closed|程序已退出！
         Edit Hotkey|编辑热键
         {1} hotkeys found.|共找到 {1} 个热键。
         {1} hotkeys imported, {2} skipped (already exist).|已导入 {1} 个热键，跳过 {2} 个（按键已存在）。
@@ -660,8 +672,9 @@ AddHKGui(){
     Gui, 02: Add, Edit, x28 y34 w352 vhkName
 
     Gui, 02: Add, GroupBox, x14 y76 w380 h108, % Tr("Hotkey Type")
-    Gui, 02: Add, Radio, x28 y100 Checked vhkType, % Tr("File")
-    Gui, 02: Add, Radio, x+24 yp vhkTypeB, % Tr("Folder")
+    Gui, 02: Add, Radio, x28 y100 Checked vhkType gGuiHandler, % Tr("File")
+    Gui, 02: Add, Radio, x+20 yp vhkTypeB gGuiHandler, % Tr("Folder")
+    Gui, 02: Add, Radio, x+20 yp vhkTypeC gGuiHandler, % Tr("File Search")       ; 内置搜索（原 !CapsLock::Gosub, FileSearchKey）
     Gui, 02: Add, Edit, x28 y130 w262 vhkPath
     Gui, 02: Add, Button, x298 y128 w84 h26 vbtnHkBrowse gGuiHandler, % Tr("&Browse...")
 
@@ -670,7 +683,8 @@ AddHKGui(){
     Gui, 02: Add, CheckBox, x80 y222 vhkalt, Alt
     Gui, 02: Add, CheckBox, x130 y222 vhkshift, Shift
     Gui, 02: Add, CheckBox, x190 y222 vhkwin, Win
-    Gui, 02: Add, DropDownList, x244 y218 w136 R15 vhkey, % "None  " klist("all^", "mods")
+    ; 按键列表包含修饰键（如 Alt），这样才能给「单独的 Alt」之类的修饰键设置热键（配合「双击」使用）
+    Gui, 02: Add, DropDownList, x244 y218 w136 R15 vhkey, % "None  " klist("all^")
 
     ; 右列：高级选项
     Gui, 02: Add, GroupBox, x410 y10 w410 h256, % Tr("Advanced Options")
@@ -692,10 +706,24 @@ AddHKGui(){
     Gui, 02: Add, Edit, x632 y200 w96 vhkInsKey, vk07
     Gui, 02: Add, Text, x424 y230 w384 h30, % Tr("Sent first as {Blind}{key}. Example: vk07 stops Shift hotkeys from toggling the IME.")
 
-    Gui, 02: Add, Button, x642 y282 w84 h28 Default vbtnHkOK gGuiHandler, % Tr("&Add")
-    Gui, 02: Add, Button, x734 y282 w84 h28 vbtnHkCancel gGuiHandler, % Tr("&Cancel")
+    ; 下排：行为选项（把原先要手写脚本才能实现的常见玩法做成界面选项）
+    Gui, 02: +Delimiter|                            ; 上面的按键列表用空格分隔；之后的列表控件改回 | 分隔
+    Gui, 02: Add, GroupBox, x14 y274 w806 h124, % Tr("Behavior")
+    Gui, 02: Add, CheckBox, x28 y300 w310 vhkDbl gGuiHandler, % Tr("Double press: fire only when pressed twice within")
+    Gui, 02: Add, Edit, x342 y296 w56 Number vhkDblMs, 300
+    Gui, 02: Add, Text, x404 y301 w24, ms
+    Gui, 02: Add, Text, x440 y301 w120, % Tr("Only while holding")
+    Gui, 02: Add, ComboBox, x566 y296 w150 R8 Choose1 vhkHold, None|LButton|RButton|MButton|XButton1|XButton2|CapsLock|Space
+    Gui, 02: Add, Text, x28 y336 w180, % Tr("If target is already running")
+    Gui, 02: Add, DropDownList, x212 y332 w130 AltSubmit Choose1 vhkRun gGuiHandler
+                              , % Tr("Run again") "|" Tr("Do nothing") "|" Tr("Close it") "|" Tr("Send keys")
+    Gui, 02: Add, Edit, x352 y332 w150 vhkRunKeys, {Click}
+    Gui, 02: Add, CheckBox, x28 y368 w780 vhkTitle, % Tr("On a window title bar: move the window to the adjacent monitor")
 
-    Gui, 02: Show, w834 h326 Hide, % Tr("Add Hotkey")
+    Gui, 02: Add, Button, x642 y412 w84 h28 Default vbtnHkOK gGuiHandler, % Tr("&Add")
+    Gui, 02: Add, Button, x734 y412 w84 h28 vbtnHkCancel gGuiHandler, % Tr("&Cancel")
+
+    Gui, 02: Show, w834 h456 Hide, % Tr("Add Hotkey")
     return
 }
 
@@ -857,6 +885,20 @@ GuiSizeHandler(){
     GuiControl, 01: Move, btnClose, % "x" w - 102 " y" h - 57
 }
 
+; 「添加 / 编辑热键」对话框：按各开关的当前状态启用 / 禁用依赖它们的控件
+SyncDlg(){
+    global
+    local on
+    Gui, 02: Submit, NoHide
+    GuiControl, 02: Enable%hkIns%, hkInsKey                 ; 插入按键：勾选后才可改按键名
+    GuiControl, 02: Enable%hkDbl%, hkDblMs                  ; 双击：勾选后才可改间隔
+    on := (hkRun = 4)
+    GuiControl, 02: Enable%on%, hkRunKeys                   ; 已在运行时「发送按键」：才需要填按键
+    on := !hkTypeC
+    GuiControl, 02: Enable%on%, hkPath                      ; 内置搜索不需要路径
+    GuiControl, 02: Enable%on%, btnHkBrowse
+}
+
 ; 各对话框复位到初始状态（打开前 / 关闭后调用）
 GuiReset(n){
     global
@@ -867,13 +909,17 @@ GuiReset(n){
         GuiControl, 02:, hkName
         GuiControl, 02:, hkType, 1
         GuiControl, 02:, hkPath
-        for i, c in ["hkctrl", "hkalt", "hkshift", "hkwin", "hkLMod", "hkRMod", "hkWild", "hkSend", "hkHook", "hkfRel", "hkIns"]
+        for i, c in ["hkctrl", "hkalt", "hkshift", "hkwin", "hkLMod", "hkRMod", "hkWild", "hkSend", "hkHook", "hkfRel", "hkIns", "hkDbl", "hkTitle"]
             GuiControl, 02:, %c%, 0
+        GuiControl, 02:, hkDblMs, 300
+        DDLSelect(2, "hkHold", "None")
+        GuiControl, 02: Choose, hkRun, 1
+        GuiControl, 02:, hkRunKeys, {Click}
         DDLSelect(2, "hkey", "None")
         GuiControl, 02:, hkIfWin
         GuiControl, 02:, hkIfWinN
         GuiControl, 02:, hkInsKey, vk07
-        GuiControl, 02: Disable, hkInsKey
+        SyncDlg()
         GuiControl, 02:, btnHkOK, % Tr("&Add")
         Gui, 02: Show, Hide, % Tr("Add Hotkey")
     }
@@ -913,21 +959,29 @@ MainWinHotkeys(hwnd){
     Hotkey, IfWinActive
 }
 
-; 注册 / 注销「主窗口热键」（读取 conf 中的 MainKey）
-MainHotkey(state){
+; 主窗口热键的按键串（读取 conf 中的 MainKey；未配置返回空串）
+MainKeyStr(){
     mk := conf.selectSingleNode("/AHK-Toolkit/Options/MainKey")
     if !IsObject(mk)
-        return
-    mods := (mk.getAttribute("ctrl") ? "^" : "") (mk.getAttribute("alt") ? "!" : "")
-          . (mk.getAttribute("shift") ? "+" : "") (mk.getAttribute("win") ? "#" : "")
-    Hotkey, % mods mk.text, MainToggle, % state " UseErrorLevel"
+        return ""
+    return (mk.getAttribute("ctrl") ? "^" : "") (mk.getAttribute("alt") ? "!" : "")
+         . (mk.getAttribute("shift") ? "+" : "") (mk.getAttribute("win") ? "#" : "") mk.text
+}
+
+; 注册 / 注销「主窗口热键」
+MainHotkey(state){
+    key := MainKeyStr()
+    if (key != "")
+        Hotkey, % key, MainToggle, % state " UseErrorLevel"
 }
 
 ; ---------------------------------------------------------------------------------------------
 ; 热键数据：加载 / 注册 / 保存 / 删除
 ; ---------------------------------------------------------------------------------------------
-; 读取 conf.xml：注册全部热键并刷新列表（新增、编辑、删除之后都调用本函数）
-Load(){
+; 刷新热键列表；reg 为 True（启动时）时同时注册全部热键。
+; 新增 / 编辑 / 删除之后只传 False：只刷新列表，其余热键保持原样不再重复注册——
+; 每次都「全部重新注册」既慢，又会让与本次操作无关的热键被反复注销再注册，增加它们失效的机会。
+Load(reg := True){
     global
     local node, bad := "", err
     Gui, 01: Default
@@ -939,9 +993,12 @@ Load(){
         if !IsHK(node)                              ; 旧版的 Script 型热键已不再支持，直接跳过
             continue
         AddRow(node)
-        err := HkSet(node, "On")
-        if (err != "")
-            bad .= "`n" err
+        if reg
+        {
+            err := HkSet(node, "On")
+            if (err != "")
+                bad .= "`n" err
+        }
     }
     AutoCols()
     GuiControl, 01: +Redraw, hkList
@@ -951,16 +1008,17 @@ Load(){
         MsgBox, 0x10, % Tr("Error"), % Tr("The hotkey could not be registered:`n{1}", bad)
 }
 
-; 只处理「文件 / 文件夹」两类热键
+; 只处理「文件 / 文件夹 / 内置搜索」三类热键（旧版的 Script 型已不再支持）
 IsHK(node){
     t := node.getAttribute("type")
-    return (t = "File" || t = "Folder")
+    return (t = "File" || t = "Folder" || t = "Search")
 }
 
 ; 向当前 ListView 追加一行：类型 / 名称 / 热键 / 路径 / 原始按键串（隐藏列）
 AddRow(node){
     key := node.getAttribute("key")
-    LV_Add("", Tr(node.getAttribute("type")), Sub(node, "name"), hkSwap(key, "long"), Sub(node, "path"), key)
+    t := node.getAttribute("type")
+    LV_Add("", Tr(t = "Search" ? "File Search" : t), Sub(node, "name"), hkSwap(key, "long"), Sub(node, "path"), key)
 }
 
 AutoCols(){
@@ -1000,24 +1058,51 @@ UpdateSB(){
     SB_SetText("`tv" script.version, 2)
 }
 
+; 热键的「真实身份」。AutoHotkey 把仅 $ / ~ 前缀不同、或修饰符顺序不同的写法视为【同一个】热键：
+; 后注册的会悄悄覆盖先注册的（先添加的那条从此失效），删除其中一条还会把两条一起关掉。
+; 所以「是否重复」必须按身份比较：去掉 $ ~，把修饰符排序，不区分大小写（= 比较本身不区分大小写）。
+HkId(key){
+    local m, t, toks := "", p := 1
+    RegExMatch(key, "O)^([$~*<>^!+#]*)(.*)$", m)
+    while (p := RegExMatch(m[1], "O)\*|[<>]?[\^!+#]", t, p))
+        toks .= t[0] "|", p += StrLen(t[0])
+    Sort, toks, D|
+    return toks m[2]
+}
+
+; 找出与 key 身份相同的已有热键，返回它的按键串（没有则返回空串）；ignoreKey 是正在编辑的旧按键串，不算冲突
+HkConflict(key, ignoreKey := ""){
+    local node, k, id := HkId(key)
+    for node in conf.selectNodes("/AHK-Toolkit/Hotkeys/hk")
+    {
+        k := node.getAttribute("key")
+        if (k != ignoreKey && HkId(k) = id)
+            return k
+    }
+    return ""
+}
+
 ; 注册(On) / 注销(Off) 一条热键，返回出错的按键名（成功返回空串）。
-;  - 热键回调通过 Func.Bind 直接绑定「路径 / 插入键 / 排除列表」，触发时无需再读 XML：
+;  - 热键回调通过 Func.Bind 绑定 HkOpts 生成的参数对象，触发时无需再读 XML：
 ;    既更快（插入键能在修饰键仍被按住时立即发出），也避免了依赖 A_ThisHotkey 字符串去反查节点
 ;    （原实现会把热键里的 ~ 前缀去掉再比较，导致勾选「透传(~)」的热键永远找不到节点而无法运行）。
-;  - 窗口条件通过 Hotkey, IfWinActive / IfWinNotActive 上下文实现。
+;  - 窗口条件 / 「按住某键」条件通过 Hotkey, IfWinActive / If 上下文实现。
 HkSet(node, state){
-    key  := node.getAttribute("key")
-    ins  := node.getAttribute("inskey")
-    act  := Sub(node, "ifwinactive"), nact := Sub(node, "ifwinnotactive")
+    local key := node.getAttribute("key"), act := Sub(node, "ifwinactive"), nact := Sub(node, "ifwinnotactive")
+    local hold := node.getAttribute("hold"), fn, err := "", i, c, ctxfn
     if (state = "On")
-        fn := Func("HotkeyHandler").Bind(Sub(node, "path"), ins, (act != "" && nact != "") ? nact : "")
-    err := ""
-    for i, c in HkContexts(act, nact)
+        fn := Func("HotkeyHandler").Bind(HkOpts(node, act, nact, hold))
+    for i, c in HkContexts(act, nact, hold)
     {
         if (c[1] = "IfWinActive")
             Hotkey, IfWinActive, % c[2]
         else if (c[1] = "IfWinNotActive")
             Hotkey, IfWinNotActive, % c[2]
+        else if (c[1] = "If")
+        {
+            ctxfn := c[2]                           ; Hotkey, If 的参数必须是「单个变量」中的函数对象
+            Hotkey, If, % ctxfn
+        }
         else
             Hotkey, IfWinActive                     ; 无条件：全局上下文
         if (state = "On")
@@ -1033,66 +1118,175 @@ HkSet(node, state){
     return err
 }
 
+; 汇总触发时需要的全部参数（Bind 之后与 XML 脱钩）
+HkOpts(node, act, nact, hold){
+    local o, m
+    o := { type: node.getAttribute("type"), path: Sub(node, "path"), ins: node.getAttribute("inskey")
+         , dbl: node.getAttribute("dbl"), run: node.getAttribute("running"), keys: node.getAttribute("runkeys")
+         , tb: node.getAttribute("titlebar") }
+    RegExMatch(node.getAttribute("key"), "O)^[$~*<>^!+#]*(.+?)( UP)?$", m)
+    o.bkey := m[1]                                  ; 去掉前缀和 UP 后的主键名，供「双击」用 KeyWait 检测（不能叫 base：那是 AHK 对象的保留属性）
+    ; 上下文承载不了的窗口条件，改在触发时检查：设置了「按住某键」时上下文被占用（act、nact 都要查）；
+    ; 「激活」和「非激活」同时设置时，上下文只承载「激活」，「非激活」在触发时查
+    o.act  := hold ? act : ""
+    o.nact := (hold || (act != "" && nact != "")) ? nact : ""
+    return o
+}
+
 ; 把窗口条件转换为 Hotkey 上下文列表：
+;  - 「按住某键」：用函数对象做上下文（同一个键共用同一个对象，否则每次注册都会产生新的上下文变体）；
 ;  - 「激活」列表：每个标题各注册一份（任一窗口激活即触发）；
-;  - 「非激活」列表：建立窗口组，用 IfWinNotActive ahk_group（所有窗口都不激活才触发）；
-;  - 两者同时设置时，上下文只能承载一类条件，「非激活」改为在触发时检查（见 HotkeyHandler）。
-HkContexts(act, nact){
-    ctx := []
-    if (act != "")
+;  - 「非激活」列表：建立窗口组，用 IfWinNotActive ahk_group（所有窗口都不激活才触发）。
+HkContexts(act, nact, hold := ""){
+    local ctx := []
+    if (hold != "")
+        ctx.Push(["If", HoldCtx(hold)])
+    else if (act != "")
     {
         Loop, Parse, act, `,, %A_Space%%A_Tab%
             if (A_LoopField != "")
                 ctx.Push(["IfWinActive", A_LoopField])
     }
     else if (nact != "")
-        ctx.Push(["IfWinNotActive", "ahk_group " NActGroup(nact)])
+        ctx.Push(["IfWinNotActive", "ahk_group " WinGroup(nact)])
     if !ctx.MaxIndex()
         ctx.Push(["", ""])
     return ctx
 }
 
-; 为「非激活」标题列表建立（并缓存）窗口组，返回组名
-NActGroup(nact){
-    static ids := {}, n := 0
-    if !ids.HasKey(nact)
-    {
-        n++
-        ids[nact] := "HKN" n
-        Loop, Parse, nact, `,, %A_Space%%A_Tab%
-            if (A_LoopField != "")
-                GroupAdd, % ids[nact], %A_LoopField%
-    }
-    return ids[nact]
+; 「按住 key 时才生效」的上下文函数。Hotkey, If 会把「热键名」作为最后一个参数传入，这里用不到
+HoldCtx(key){
+    static fns := {}
+    if !fns.HasKey(key)
+        fns[key] := Func("HeldKey").Bind(key)
+    return fns[key]
+}
+HeldKey(key, hk){
+    return GetKeyState(key, "P")
 }
 
-; 热键触发入口。参数均由 HkSet 通过 Bind 预先绑定：目标路径、插入键、需在触发时检查的「非激活」列表。
-HotkeyHandler(path, ins, nact){
-    if (nact != "" && WinActive("ahk_group " NActGroup(nact)))
+; 为窗口标题列表建立（并缓存）窗口组，返回组名
+WinGroup(list){
+    static ids := {}, n := 0
+    if !ids.HasKey(list)
+    {
+        n++
+        ids[list] := "HKW" n
+        Loop, Parse, list, `,, %A_Space%%A_Tab%
+            if (A_LoopField != "")
+                GroupAdd, % ids[list], %A_LoopField%
+    }
+    return ids[list]
+}
+
+; 热键触发入口。参数 o 由 HkOpts 生成。处理顺序：窗口条件 -> 插入键 -> 双击 -> 标题栏移屏 -> 内置搜索 -> 「已在运行」处理 -> 运行
+HotkeyHandler(o){
+    if (o.act != "" && !WinActive("ahk_group " WinGroup(o.act)))
+        return
+    if (o.nact != "" && WinActive("ahk_group " WinGroup(o.nact)))
         return
     ; 必须最先执行：趁修饰键（如 Shift）仍被按住时补发一个空键，让输入法不再把这次按键当作「单击 Shift」。
     ; {Blind} 保证不改变修饰键的当前状态。
-    if (ins != "")
-        SendInput, % "{Blind}{" ins "}"
+    if (o.ins != "")
+        SendInput, % "{Blind}{" o.ins "}"
+    if (o.dbl > 0 && !DoublePress(o.bkey, o.dbl))
+        return
+    if (o.tb && TitleBarMove())
+        return
+    if (o.type = "Search")
+    {
+        SetTimer, FileSearchKey, -1                 ; 在独立线程里打开内置搜索（与原 !CapsLock::Gosub, FileSearchKey 等价）
+        return
+    }
+    if (o.run != "" && (pid := RunningPID(o.path)))
+    {
+        if (o.run = "close")
+        {
+            Process, Close, %pid%
+            ToolTip, % Tr("Program closed")
+            Sleep, 300
+            ToolTip
+        }
+        else if (o.run = "send")
+            Send, % o.keys
+        return                                      ; skip：什么都不做
+    }
     try
-        Run, % path
+        Run, % o.path
     catch
         MsgBox, 0x10
               , % Tr("Error")
-              , % Tr("The file this hotkey is trying to access does not exist.") "`n" path
+              , % Tr("The file this hotkey is trying to access does not exist.") "`n" o.path
+}
+
+; 双击检测：等第一次按键松开后，在 ms 毫秒内是否再次按下（等价于 KeyWait, key / KeyWait, key, D T0.x）
+DoublePress(key, ms){
+    KeyWait, %key%
+    KeyWait, %key%, % "D T" ms / 1000
+    return !ErrorLevel
+}
+
+; 鼠标位于窗口顶部标题栏区域（离窗口上沿 50 个 96DPI 像素以内）时，把窗口移到相邻显示器：
+; 点在窗口左半边 -> Win+Shift+←，右半边 -> Win+Shift+→。已处理返回 True。
+TitleBarMove(){
+    local mx, my, id, title, w
+    CoordMode, Mouse, Relative                      ; 坐标相对于鼠标下的窗口（物理像素，所以按 DPI 缩放判断区域）
+    MouseGetPos, mx, my, id
+    WinGetTitle, title, ahk_id %id%
+    WinGetPos,,, w,, ahk_id %id%
+    if (my > 0 && my < DpiScale * 50 && title != "Program Manager")
+    {
+        SendInput, % (mx < w / 2) ? "+#{Left}" : "+#{Right}"
+        return True
+    }
+    return False
+}
+
+; 目标是否已在运行，返回 PID（未运行或无法判断返回 0）：
+;  .exe 按进程名；.ahk 按「AutoHotkey 进程的命令行里含该脚本名」；其他类型（文档 / 图片 / 文件夹）无法判断。
+RunningPID(path){
+    static wmi
+    local name, ext, p
+    SplitPath, path, name,, ext
+    if (ext = "exe")
+    {
+        Process, Exist, %name%
+        return ErrorLevel
+    }
+    if (ext = "ahk")
+    {
+        try
+        {
+            if !wmi
+                wmi := ComObjGet("winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2")    ; 连接只建立一次，避免每次触发都新建
+            for p in wmi.ExecQuery("SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name LIKE 'AutoHotkey%' OR Name='InternalAHK.exe'")
+                if InStr(p.CommandLine, name)
+                    return p.ProcessId
+        }
+    }
+    return 0
+}
+
+; 写入 / 删除节点属性（value 为空则删除，保持配置文件整洁）
+SetAttr(node, name, value){
+    if (value = "")
+        node.removeAttribute(name)
+    else
+        node.setAttribute(name, value)
 }
 
 ; 保存「添加 / 编辑热键」对话框：校验 -> 注册 -> 写入 conf.xml -> 刷新。成功返回 True
 SaveHK(){
     global
-    local mk, mods, fullkey, ins, name, path, node, dup, err
+    local mk, mods, fullkey, ins, name, path, node, dup, err, i, r, type, runsel
     if (hkey = "None" || hkey = "")
     {
         MsgBox, 0x10, % Tr("Error while trying to create new Hotkey"), % Tr("Please select the key that you want to use as a hotkey.")
         return False
     }
-    path := Trim(hkPath)
-    if (path = "")
+    type := hkTypeC ? "Search" : hkTypeB ? "Folder" : "File"      ; 三个单选框各自带变量时，变量只是 0/1，不是序号
+    path := (type = "Search") ? "" : Trim(hkPath)
+    if (path = "" && type != "Search")
     {
         MsgBox, 0x10, % Tr("Error while trying to create new Hotkey"), % Tr("Please enter the file or folder path to launch.")
         return False
@@ -1111,14 +1305,21 @@ SaveHK(){
     if (hkIns && ins = "")
         ins := "vk07"
     SplitPath, path,,,, name
-    name := Trim(hkName) != "" ? Trim(hkName) : name
+    name := Trim(hkName) != "" ? Trim(hkName) : (type = "Search") ? Tr("File Search") : name
 
-    dup := FindHK(fullkey)
-    if (IsObject(dup) && !(editingHK && fullkey = oldKey))
+    ; 重复检查按「真实身份」而不是按字符串（见 HkId）；程序自己占用的热键也不能再分配
+    dup := HkConflict(fullkey, editingHK ? oldKey : "")
+    if (dup != "")
     {
-        MsgBox, 0x10, % Tr("Error while trying to create new Hotkey"), % Tr("A hotkey with this key already exists.")
+        MsgBox, 0x10, % Tr("Error while trying to create new Hotkey"), % Tr("A hotkey with this key already exists:`n{1}", hkSwap(dup, "long"))
         return False
     }
+    for i, r in ["^F12", "^CtrlBreak", MainKeyStr()]
+        if (HkId(r) = HkId(fullkey))
+        {
+            MsgBox, 0x10, % Tr("Error while trying to create new Hotkey"), % Tr("This hotkey is reserved by the program:`n{1}", hkSwap(r, "long"))
+            return False
+        }
 
     if editingHK
     {
@@ -1128,32 +1329,38 @@ SaveHK(){
     else
         node := conf.selectSingleNode("/AHK-Toolkit/Hotkeys").appendChild(conf.createElement("hk"))
 
-    node.setAttribute("type", (hkType = 2) ? "Folder" : "File")
+    runsel := hkRun                                 ; 「已在运行时」下拉框的序号：1 再次运行 / 2 不处理 / 3 关闭它 / 4 发送按键
+    node.setAttribute("type", type)
     node.setAttribute("key", fullkey)
-    if (ins != "")
-        node.setAttribute("inskey", ins)
-    else
-        node.removeAttribute("inskey")
+    SetAttr(node, "inskey", ins)
+    SetAttr(node, "dbl", hkDbl ? ((hkDblMs > 0) ? hkDblMs : 300) : "")
+    SetAttr(node, "hold", (hkHold = "None") ? "" : Trim(hkHold))
+    SetAttr(node, "running", (runsel = 2) ? "skip" : (runsel = 3) ? "close" : (runsel = 4) ? "send" : "")
+    SetAttr(node, "runkeys", (runsel = 4) ? (Trim(hkRunKeys) != "" ? Trim(hkRunKeys) : "{Click}") : "")
+    SetAttr(node, "titlebar", hkTitle ? 1 : "")
     SetChild(node, "name", name), SetChild(node, "path", path)
     SetChild(node, "ifwinactive", Trim(hkIfWin)), SetChild(node, "ifwinnotactive", Trim(hkIfWinN))
 
     err := HkSet(node, "On")
-    if (err != "")                                  ; 按键无效：丢弃内存中的修改，从磁盘恢复并重新注册
+    if (err != "")                                  ; 按键无效：丢弃内存中的修改，从磁盘恢复，并只把被注销的旧热键重新注册回来
     {
         MsgBox, 0x10, % Tr("Error"), % Tr("The hotkey could not be registered:`n{1}", err)
+        HkSet(node, "Off")                          ; 清掉可能已部分注册的新按键
         conf.load(script.conf)
-        Load()
+        if editingHK
+            HkSet(FindHK(oldKey), "On")
+        Load(False)
         return False
     }
     SaveConf()
-    Load()
+    Load(False)                                     ; 只刷新列表；其他热键保持原样，不重复注册
     return True
 }
 
 ; 双击列表条目：把节点内容回填到「添加热键」对话框进入编辑模式
 EditHK(key){
     global
-    local node, m, flags
+    local node, m, flags, t, v
     node := FindHK(key)
     if !IsObject(node)
         return
@@ -1161,7 +1368,8 @@ EditHK(key){
     editingHK := True, oldKey := key
 
     GuiControl, 02:, hkName, % Sub(node, "name")
-    GuiControl, 02:, % (node.getAttribute("type") = "Folder") ? "hkTypeB" : "hkType", 1
+    t := node.getAttribute("type")
+    GuiControl, 02:, % (t = "Folder") ? "hkTypeB" : (t = "Search") ? "hkTypeC" : "hkType", 1
     GuiControl, 02:, hkPath, % Sub(node, "path")
     GuiControl, 02:, hkIfWin, % Sub(node, "ifwinactive")
     GuiControl, 02:, hkIfWinN, % Sub(node, "ifwinnotactive")
@@ -1186,8 +1394,21 @@ EditHK(key){
     {
         GuiControl, 02:, hkIns, 1
         GuiControl, 02:, hkInsKey, % node.getAttribute("inskey")
-        GuiControl, 02: Enable, hkInsKey
     }
+    ; 行为选项（属性缺省时保持 GuiReset 设置的默认值）
+    if (node.getAttribute("dbl") != "")
+    {
+        GuiControl, 02:, hkDbl, 1
+        GuiControl, 02:, hkDblMs, % node.getAttribute("dbl")
+    }
+    if (node.getAttribute("hold") != "")
+        GuiControl, 02: Text, hkHold, % node.getAttribute("hold")          ; 组合框允许手输任意按键名
+    v := node.getAttribute("running")
+    GuiControl, 02: Choose, hkRun, % (v = "skip") ? 2 : (v = "close") ? 3 : (v = "send") ? 4 : 1
+    if (node.getAttribute("runkeys") != "")
+        GuiControl, 02:, hkRunKeys, % node.getAttribute("runkeys")
+    GuiControl, 02:, hkTitle, % node.getAttribute("titlebar") ? 1 : 0
+    SyncDlg()
     GuiControl, 02:, btnHkOK, % Tr("&Save")
     Gui, 01: +Disabled
     Gui, 02: Show, , % Tr("Edit Hotkey")
@@ -1219,7 +1440,7 @@ DeleteSelected(){
         }
     }
     SaveConf()
-    Load()
+    Load(False)
 }
 
 ; ---------------------------------------------------------------------------------------------
@@ -1275,7 +1496,7 @@ ImportAccept(){
     Loop % LV_GetCount()
     {
         LV_GetText(t, A_Index, 1), LV_GetText(k, A_Index, 2), LV_GetText(p, A_Index, 3)
-        if IsObject(FindHK(k))
+        if (HkConflict(k) != "")                    ; 与已有热键「真实身份」相同的跳过
         {
             skipped++
             continue
@@ -1285,11 +1506,12 @@ ImportAccept(){
         node.setAttribute("key", k)
         SplitPath, p,,,, name
         SetChild(node, "name", name), SetChild(node, "path", p)
+        HkSet(node, "On")
         cnt++
     }
     SaveConf()
     Gui, 01: Default
-    Load()
+    Load(False)
     MsgBox, 0x40, % Tr("Import"), % Tr("{1} hotkeys imported, {2} skipped (already exist).", cnt, skipped)
 }
 
@@ -1309,6 +1531,13 @@ DoExport(){
         if !IsHK(node)
             continue
         key := node.getAttribute("key"), path := Sub(node, "path"), ins := node.getAttribute("inskey")
+        if (node.getAttribute("type") = "Search")   ; 内置搜索依赖本程序，无法导出为独立脚本
+        {
+            out .= "; " key ": built-in file search (not exported)`n"
+            continue
+        }
+        if (node.getAttribute("dbl") != "" || node.getAttribute("hold") != "" || node.getAttribute("running") != "" || node.getAttribute("titlebar") != "")
+            out .= "; NOTE: the behavior options (double press / hold key / already running / title bar) of " key " are not exported`n"
         block := key "::" ((ins != "") ? "`n    SendInput, {Blind}{" ins "}`n    Run, " path "`nreturn" : "Run, " path)
         cond := CondExpr(Sub(node, "ifwinactive"), Sub(node, "ifwinnotactive"))
         out .= (cond != "") ? "`n#If " cond "`n" block "`n#If`n" : block "`n"
@@ -1421,20 +1650,15 @@ GuiHandler(){
     ; 添加 / 编辑热键
     if (a_gui = 2)
     {
-        if (a_guicontrol = "hkIns")                 ; 勾选「插入按键」时才允许修改按键名
-        {
-            if hkIns
-                GuiControl, 02: Enable, hkInsKey
-            else
-                GuiControl, 02: Disable, hkInsKey
-        }
+        if a_guicontrol in hkIns,hkDbl,hkRun,hkType,hkTypeB,hkTypeC        ; 这些开关会影响其他控件是否可用
+            SyncDlg()
         else if (a_guicontrol = "btnHkBrowse")
         {
             Gui, 02: +OwnDialogs
-            if (hkType = 1)
-                FileSelectFile, _p, 3, %A_ProgramFiles%, % Tr("Please select the file to launch.")
-            else
+            if hkTypeB
                 FileSelectFolder, _p, *%A_ProgramFiles%, 3, % Tr("Please select the folder to launch.")
+            else
+                FileSelectFile, _p, 3, %A_ProgramFiles%, % Tr("Please select the file to launch.")
             if (_p != "")
             {
                 GuiControl, 02:, hkPath, %_p%
@@ -1681,39 +1905,19 @@ ListHandler(){
 
 
 
-;添加鼠标第三个和第四个按键快捷键 
+;添加鼠标第三个和第四个按键快捷键 / 双击 Alt / ^` 翻译 / LButton+RButton 切换翻译工具 / !CapsLock 内置搜索
 ;~ ===============================================================================================
-;添加中键移动多个屏幕窗口，靠近左顶点左移，否则右移
-XButton1 UP::
-CoordMode, Mouse, Relative  
-MouseGetPos,  xpos, ypos, id, control
-WinGetTitle, Win_Title,Ahk_ID %id%    ;当前进程的标题
-WinGetPos, X, Y, Width, Height, Ahk_ID %id%
-if (ypos>0 and ypos<DpiScale*50 and Win_Title<>"Program Manager")                                         ;启动两屏幕换移窗口按键
-{
-    if (xpos>=0 and  xpos<Width/2)  ;左移动窗口
-        Sendinput,+#{Left}
-    if (xpos>=Width/2 and  xpos<=Width)  ;右移动窗口
-        Sendinput,+#{Right}    
-    ;~ Run,D:\音速启动软件\中键触发两屏幕移动窗口.ahk
-    return
-}
-if Vstate = 1
-{
-    Vstate := 0
-    return
-}
-NewPID := AHK_Name("Candy菜单.ahk")
-if NewPID = 0
-        Run, D:\音速启动软件\Candy\Candy菜单\Candy菜单.ahk
-else
-	Click
-return
-
-
+; 上述原先手写在这里的热键，现已全部改为「界面配置」（见 conf.xml 与添加热键窗口的「行为」选项）：
+;   XButton1 UP        → 窗口标题栏移屏 + 「已在运行时发送 {Click}」
+;   Alt（双击）        → 双击触发
+;   ^`                 → 带参数的普通文件热键
+;   RButton            → 「仅当按住 LButton」+「已在运行时关闭它」
+;   !CapsLock          → 类型「内置搜索」
+; 删除静态定义是为了避免与界面里同键的热键重复注册（后注册的会覆盖先注册的）。
+;~ ===============================================================================================
 
 ; ===============================================================================================
-;双击Ctrl键激活搜索
+;双击Ctrl键激活搜索（已停用，仅作参考。不要用「非透传」的 Ctrl 热键实现：会吞掉 Ctrl，导致 Ctrl+C 失灵）
 ; ============================================================
 ;~ #InstallMouseHook            ; 让A_PriorKey能看见鼠标事件：Ctrl+点击/Ctrl+滚轮 也会被正确"作废"
 ;~ lastCtrlUp := 0              ; 必须初始化！且必须放在脚本顶部自动执行段，
@@ -1732,50 +1936,6 @@ return
     ;~ else
         ;~ lastCtrlUp := A_TickCount
 ;~ return
-
-; Ctrl + CapsLock 激活搜索
-!CapsLock::Gosub, FileSearchKey
-; ===============================================================================================
-
-
-
-
-; ===============================================================================================
-;双击Alt打开密码输入软件
-Alt::
-KeyWait, Alt
-KeyWait, Alt, D, T0.10
-If ErrorLevel <> 1
-    run,D:\音速启动软件\自动输入\AutoInput.ahk
-return
-; ===============================================================================================
-
-
-
-
-; ===============================================================================================
-;双击CapsLock键快速查询翻译字典
-
-^`::
-   run D:\常用的绿色软件\AutoHotKey\AutoHotkey.exe D:\音速启动软件\一键翻译\一键翻译.ahk 1
-return
-
-
- ; 激活翻译工具
-#If GetKeyState("LButton", "P")  ; !!! works on ALL next hotkeys
-RButton:: 
-    TranslatePID := AHK_Name("一键翻译.ahk")
-    if TranslatePID = 0
-        Run, D:\音速启动软件\一键翻译\一键翻译.ahk
-    else
-    {
-        Process, Close, %TranslatePID%
-        tooltip,程序已退出！
-        sleep,300
-        tooltip
-    }
-return
-#If 
 ; ===============================================================================================
 ;} 
 
