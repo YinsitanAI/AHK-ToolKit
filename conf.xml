@@ -254,5 +254,24 @@
 			<name>Candy菜单</name>
 			<path>D:\音速启动软件\Candy\Candy菜单\Candy菜单.ahk</path>
 		</hk>
+		<hk type="File" key="XButton1 UP" titlebar="1" running="send" runkeys="{Click}">
+			<name>Candy菜单（鼠标侧键）</name>
+			<path>D:\音速启动软件\Candy\Candy菜单\Candy菜单.ahk</path>
+		</hk>
+		<hk type="Search" key="!CapsLock">
+			<name>内置搜索</name>
+		</hk>
+		<hk type="File" key="Alt" dbl="100">
+			<name>双击Alt打开密码输入软件</name>
+			<path>D:\音速启动软件\自动输入\AutoInput.ahk</path>
+		</hk>
+		<hk type="File" key="^`">
+			<name>一键翻译</name>
+			<path>D:\常用的绿色软件\AutoHotKey\AutoHotkey.exe D:\音速启动软件\一键翻译\一键翻译.ahk 1</path>
+		</hk>
+		<hk type="File" key="RButton" hold="LButton" running="close">
+			<name>切换翻译工具（按住左键+右键）</name>
+			<path>D:\音速启动软件\一键翻译\一键翻译.ahk</path>
+		</hk>
 	</Hotkeys>
 </AHK-Toolkit>
