@@ -80,6 +80,11 @@ if (A_AhkVersion < "1.1.30" || !A_IsUnicode)
 ; 超时累计 11 次后钩子会被系统静默移除（表现为热键/手势突然失效，修饰键状态也可能错乱）。
 ; 把 #If 求值超时(默认 1000 ms)缩短到 100 ms，让 AutoHotkey 先于系统放弃，保证钩子不被摘除。
 #IfTimeout 100
+; ── 临时诊断（排查「Ctrl+C 变成字母 c」）：强制安装键盘钩子并加大按键历史，Win+F11 打开 KeyHistory。
+;    KeyHistory 只在内存里、不写盘；它的 Type 列能区分按键来源：空=物理按键，a=别的程序注入，
+;    i=本脚本自己注入。问题定位完后删掉这两行和末尾的 #F11 热键即可。
+#InstallKeybdHook
+#KeyHistory 500
 
 ; --
 SendMode, Input
@@ -433,7 +438,7 @@ LoadZh(){
         Install hook ($)|强制键盘钩子 ($)
         Fire on release (UP)|松开时触发 (UP)
         Insert key before launch|启动前插入按键
-        Sent first as {Blind}{key}. Example: vk07 stops Shift hotkeys from toggling the IME.|先以 {Blind}{按键} 的形式发送，例如 vk07 可避免 Shift 热键触发输入法中英文切换。
+        Sent first as {Blind}{key}. Example: vkE8 stops Shift hotkeys from toggling the IME.|先以 {Blind}{按键} 的形式发送，例如 vkE8 可避免 Shift 热键触发输入法中英文切换。
         &Cancel|取消(&C)
         Add Hotkey|添加热键
         Import from|导入来源
@@ -701,10 +706,10 @@ AddHKGui(){
     Gui, 02: Add, CheckBox, x424 y170 w190 vhkHook, % Tr("Install hook ($)")
     Gui, 02: Add, CheckBox, x+8 yp w190 vhkfRel, % Tr("Fire on release (UP)")
 
-    ; 插入按键：触发后先补发该按键，再启动目标（等价于 RunNoToggle：先发 {Blind}{vk07} 再 Run）
+    ; 插入按键：触发后先补发该按键，再启动目标（等价于 RunNoToggle：先发 {Blind}{vkE8} 再 Run）
     Gui, 02: Add, CheckBox, x424 y204 w200 vhkIns gGuiHandler, % Tr("Insert key before launch")
-    Gui, 02: Add, Edit, x632 y200 w96 vhkInsKey, vk07
-    Gui, 02: Add, Text, x424 y230 w384 h30, % Tr("Sent first as {Blind}{key}. Example: vk07 stops Shift hotkeys from toggling the IME.")
+    Gui, 02: Add, Edit, x632 y200 w96 vhkInsKey, vkE8
+    Gui, 02: Add, Text, x424 y230 w384 h30, % Tr("Sent first as {Blind}{key}. Example: vkE8 stops Shift hotkeys from toggling the IME.")
 
     ; 下排：行为选项（把原先要手写脚本才能实现的常见玩法做成界面选项）
     Gui, 02: +Delimiter|                            ; 上面的按键列表用空格分隔；之后的列表控件改回 | 分隔
@@ -918,7 +923,7 @@ GuiReset(n){
         DDLSelect(2, "hkey", "None")
         GuiControl, 02:, hkIfWin
         GuiControl, 02:, hkIfWinN
-        GuiControl, 02:, hkInsKey, vk07
+        GuiControl, 02:, hkInsKey, vkE8
         SyncDlg()
         GuiControl, 02:, btnHkOK, % Tr("&Add")
         Gui, 02: Show, Hide, % Tr("Add Hotkey")
@@ -1125,6 +1130,9 @@ HkOpts(node, act, nact, hold){
          , dbl: node.getAttribute("dbl"), run: node.getAttribute("running"), keys: node.getAttribute("runkeys")
          , tb: node.getAttribute("titlebar") }
     RegExMatch(node.getAttribute("key"), "O)^[$~*<>^!+#]*(.+?)( UP)?$", m)
+    ; 旧配置里存的 vk07 自 Win10 1909 起被系统保留给 Game Bar（AHK 文档 #MenuMaskKey 一节），运行时换成未分配的 vkE8
+    if (o.ins = "vk07")
+        o.ins := "vkE8"
     o.bkey := m[1]                                  ; 去掉前缀和 UP 后的主键名，供「双击」用 KeyWait 检测（不能叫 base：那是 AHK 对象的保留属性）
     ; 上下文承载不了的窗口条件，改在触发时检查：设置了「按住某键」时上下文被占用（act、nact 都要查）；
     ; 「激活」和「非激活」同时设置时，上下文只承载「激活」，「非激活」在触发时查
@@ -1208,7 +1216,10 @@ HotkeyHandler(o){
             ToolTip
         }
         else if (o.run = "send")
+        {
+            WaitModsUp()
             Send, % o.keys
+        }
         return                                      ; skip：什么都不做
     }
     try
@@ -1217,6 +1228,16 @@ HotkeyHandler(o){
         MsgBox, 0x10
               , % Tr("Error")
               , % Tr("The file this hotkey is trying to access does not exist.") "`n" o.path
+}
+
+; 发送不带 {Blind} 的按键前，先等用户松开全部修饰键（每个最多等 1 秒，超时照常发送）。
+; 不带 {Blind} 的 Send 遇到仍按着的修饰键，会先注入一个弹起、发完再注入按下来「还原」。
+; 只要系统里还有别的程序装着低级键盘钩子（PasteJump 就有），AutoHotkey 官方文档说明 SendInput
+; 就失去了「整组不可打断」的优势：用户的物理按键可能插进这串注入中间，注入的 Ctrl 弹起若落在
+; 用户新按下的 Ctrl 之后，随后的 C 就成了字母 c。修饰键都已松开时 Send 无需释放/还原，竞态不存在。
+WaitModsUp(timeout := 1){
+    for i, k in ["Ctrl", "Alt", "Shift", "LWin", "RWin"]
+        KeyWait, %k%, T%timeout%
 }
 
 ; 双击检测：等第一次按键松开后，在 ms 毫秒内是否再次按下（等价于 KeyWait, key / KeyWait, key, D T0.x）
@@ -1236,6 +1257,7 @@ TitleBarMove(){
     WinGetPos,,, w,, ahk_id %id%
     if (my > 0 && my < DpiScale * 50 && title != "Program Manager")
     {
+        WaitModsUp()
         SendInput, % (mx < w / 2) ? "+#{Left}" : "+#{Right}"
         return True
     }
@@ -1303,7 +1325,7 @@ SaveHK(){
     fullkey := (hkHook ? "$" : "") (hkSend ? "~" : "") (hkWild ? "*" : "") mods hkey (hkfRel ? " UP" : "")
     ins := hkIns ? Trim(hkInsKey, " `t{}") : ""
     if (hkIns && ins = "")
-        ins := "vk07"
+        ins := "vkE8"
     SplitPath, path,,,, name
     name := Trim(hkName) != "" ? Trim(hkName) : (type = "Search") ? Tr("File Search") : name
 
@@ -1314,7 +1336,7 @@ SaveHK(){
         MsgBox, 0x10, % Tr("Error while trying to create new Hotkey"), % Tr("A hotkey with this key already exists:`n{1}", hkSwap(dup, "long"))
         return False
     }
-    for i, r in ["^F12", "^CtrlBreak", MainKeyStr()]
+    for i, r in ["^F12", "^CtrlBreak", "#F11", MainKeyStr()]
         if (HkId(r) = HkId(fullkey))
         {
             MsgBox, 0x10, % Tr("Error while trying to create new Hotkey"), % Tr("This hotkey is reserved by the program:`n{1}", hkSwap(r, "long"))
@@ -1857,6 +1879,7 @@ ListHandler(){
 
 ^F12::Suspend, Toggle
 ^CtrlBreak::Reload
+#F11::KeyHistory                    ; 临时诊断：Win+F11 查看最近 500 个按键事件（见文件开头 #KeyHistory）
 
 
 

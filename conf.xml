@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<AHK-Toolkit version="0.9.0-161030" alwaysontop="0">
+<AHK-Toolkit version="0.10.0" alwaysontop="0">
 	<Options>
 		<Startup sww="1" smm="1" cfu="0" lang="zh">
 		</Startup>
