@@ -1881,6 +1881,50 @@ ListHandler(){
 ^CtrlBreak::Reload
 #F11::KeyHistory                    ; 临时诊断：Win+F11 查看最近 500 个按键事件（见文件开头 #KeyHistory）
 
+; ---------------------------------------------------------------------------------------------
+; 按键抖动过滤（防止 Ctrl+C 时 C 键抖动，多出字母 c 覆盖掉选中文字）
+; ---------------------------------------------------------------------------------------------
+; 开关老化 / 进灰后，按下或松开的瞬间触点会反复通断，系统收到「↓↑↓↑」。多出来的那次↓若落在
+; Ctrl 已松开之后，就成了字母 c。这里只拦截「刚松开又按下」的那一次按下，两条规则：
+;   1) 距该键上次松开不到 DebounceMs                          → 抖动（普通打字、按住 Ctrl 时的连击）
+;   2) 上一下是 Ctrl+C，这一下没有 Ctrl，且距松开不到 ChordMs → 抖动（专治 Ctrl+C 后冒出来的 c）
+; 只拦截、不补发：放行的是系统原生按键，输入法 / 长按连发 / 其他钩子程序都不受影响；
+; 只看物理按键，KeePass 自动输入、文本扩展等程序注入的按键一律放行；
+; 被拦下的按下，其配对的弹起由 AHK 一并吞掉，放行的按下其弹起必定放行，不会卡键；
+; #If 求值超时（见文件开头 #IfTimeout）时按键照常放行。别的键也抖，照抄这两行即可，如 *v:: / *v up::
+#If ChatterGuard()
+*c::return
+*c up::return
+#If
+
+ChatterGuard(){
+    static DebounceMs := 30, ChordMs := 150         ; 阈值（毫秒），说明见上
+    static freq := 0, lastUp := {}, held := {}, chord := {}
+    if !freq
+        DllCall("QueryPerformanceFrequency", "Int64*", freq)
+    DllCall("QueryPerformanceCounter", "Int64*", now)   ; 高精度计时（A_TickCount 精度约 16 ms，不够用）
+    k := RegExReplace(A_ThisHotkey, "i)^\*|\s+up$")
+    p := GetKeyState(k, "P")                        ; 钩子在求值前已按本次事件更新物理状态：物理按下=1，弹起或程序注入=0
+    if RegExMatch(A_ThisHotkey, "i)\sup$")
+    {
+        ; 按下时 AHK 也会预先查询一次 up 变体（此时 p=1），只有真正的物理弹起才记时间
+        if (!p && held[k])
+            lastUp[k] := now, held[k] := False
+        return False
+    }
+    if !p                                           ; 程序注入的按下：不过滤
+        return False
+    held[k] := True
+    ctrl := GetKeyState("Ctrl")
+    if lastUp.HasKey(k)
+    {
+        dt := (now - lastUp[k]) * 1000 / freq       ; 距上次物理松开的毫秒数
+        if (dt < DebounceMs || (chord[k] && !ctrl && dt < ChordMs))
+            return True                             ; 抖动：拦截这次按下
+    }
+    chord[k] := ctrl                                ; 放行：记下这一下是否按着 Ctrl
+    return False
+}
 
 
 #include <FileSearch>
