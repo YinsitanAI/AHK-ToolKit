@@ -1222,10 +1222,6 @@ HotkeyHandler(o){
         }
         return                                      ; skip：什么都不做
     }
-    ; 等用户松开热键的修饰键再启动目标。热键在「按下」时就触发，此刻手指往往还按着 Shift / Ctrl / Win；
-    ; 若目标一启动就模拟按键（{Blind}、keybd_event 一类不会先释放修饰键的方式），这些仍按着的修饰键
-    ; 会混进目标的按键里：例如 Shift+B 启动的脚本发出的 Ctrl+D 会变成 Ctrl+Shift+D，误触发 ^+D 热键。
-    WaitModsUp()
     try
         Run, % o.path
     catch
