@@ -158,7 +158,7 @@ AutoHotkeyU32.exe AHK-ToolKit.ahk
 | **If target is already running** | 目标已在运行时：*Run again*（默认）/ *Do nothing* / *Close it*（关闭它，实现「再按一次就退出」）/ *Send keys*（改为发送按键，如 `{Click}`）。`.exe` 按进程名、`.ahk` 按「AutoHotkey 进程命令行含脚本名」判断；文档 / 图片 / 文件夹无法判断，视为未运行 | `AHK_Name("xxx.ahk")` 判断后 `Click` / `Process, Close` |
 | **On a window title bar…** | 鼠标位于窗口顶部标题栏区域（离窗口上沿 50 个 96DPI 像素以内）时，不运行目标，而是把窗口移到相邻显示器：点在窗口左半边 → `Win+Shift+←`，右半边 → `Win+Shift+→` | `XButton1 UP::` 里的 `Sendinput,+#{Left}` 分支 |
 
-触发时的处理顺序：窗口条件 → 插入键 → 双击 → 标题栏移屏 → 内置搜索 → 已在运行处理 → 运行。
+触发时的处理顺序：窗口条件 → 插入键 → 双击 → 标题栏移屏 → 内置搜索 → 已在运行处理 → **等热键的修饰键松开** → 运行。最后这一步防止仍按着的 Shift / Ctrl / Win 混进目标程序模拟的按键里（例如 Shift+B 启动的脚本发出的 Ctrl+D 变成 Ctrl+Shift+D，误触发 `^+D` 热键）；每个修饰键最多等 1 秒。
 
 > 这些选项都存为 `conf.xml` 中 `<hk>` 节点的可选属性（见[配置参考](#配置参考)）。导出为 `.ahk` 时，行为选项**不会**导出（导出文件里会留一行注释提醒）。
 
