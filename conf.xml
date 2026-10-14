@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<AHK-Toolkit version="0.9.0-161030" alwaysontop="0">
+<AHK-Toolkit version="0.10.0" alwaysontop="0">
 	<Options>
 		<Startup sww="1" smm="1" cfu="0" lang="zh">
 		</Startup>
@@ -258,7 +258,7 @@
 			<name>Candy菜单（鼠标侧键）</name>
 			<path>D:\音速启动软件\Candy\Candy菜单\Candy菜单.ahk</path>
 		</hk>
-		<hk type="Search" key="!CapsLock">
+		<hk type="Search" key="Control" dbl="150">
 			<name>内置搜索</name>
 		</hk>
 		<hk type="File" key="Alt" dbl="100">
@@ -272,6 +272,20 @@
 		<hk type="File" key="RButton" hold="LButton" running="close">
 			<name>切换翻译工具（按住左键+右键）</name>
 			<path>D:\音速启动软件\一键翻译\一键翻译.ahk</path>
+		</hk>
+		<hk type="File" key="^S">
+			<name>1Remote发送文件</name>
+			<path>D:\音速启动软件\远程桌面\1Remote\1Remote-sftp-toggle.ahk</path>
+			<ifwinactive>ahk_exe putty_portable_1Remote.exe,ahk_class TScpCommanderForm,ahk_class TScpExplorerForm</ifwinactive>
+		</hk>
+		<hk type="File" key="^Z">
+			<name>1Remote发送文件关闭</name>
+			<path>D:\音速启动软件\远程桌面\1Remote\1remote-sftp-close.ahk</path>
+			<ifwinactive>ahk_exe putty_portable_1Remote.exe,ahk_class TScpCommanderForm,ahk_class TScpExplorerForm</ifwinactive>
+		</hk>
+		<hk type="File" key="^+D">
+			<name>切换禁用PasteJump</name>
+			<path>D:\音速启动软件\PasteJump\PasteJump-DisableToggle.ahk</path>
 		</hk>
 	</Hotkeys>
 </AHK-Toolkit>

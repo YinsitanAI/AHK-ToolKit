@@ -80,6 +80,11 @@ if (A_AhkVersion < "1.1.30" || !A_IsUnicode)
 ; 超时累计 11 次后钩子会被系统静默移除（表现为热键/手势突然失效，修饰键状态也可能错乱）。
 ; 把 #If 求值超时(默认 1000 ms)缩短到 100 ms，让 AutoHotkey 先于系统放弃，保证钩子不被摘除。
 #IfTimeout 100
+; ── 临时诊断（排查「Ctrl+C 变成字母 c」）：强制安装键盘钩子并加大按键历史，Win+F11 打开 KeyHistory。
+;    KeyHistory 只在内存里、不写盘；它的 Type 列能区分按键来源：空=物理按键，a=别的程序注入，
+;    i=本脚本自己注入。问题定位完后删掉这两行和末尾的 #F11 热键即可。
+#InstallKeybdHook
+#KeyHistory 500
 
 ; --
 SendMode, Input
@@ -98,12 +103,12 @@ Gosub, EverythingStart
 global DpiScale:=A_ScreenDPI/96                     ; 系统 DPI 缩放比例（鼠标手势层仍需使用）
 global script := { base        : scriptobj
                   ,name        : "AHK-ToolKit"
-                  ,version     : "0.9.0-161030"
-                  ,author      : "RaptorX"
-                  ,email       : "graptorx@gmail.com"
-                  ,homepage    : "http://www.autohotkey.com/forum/topic61379.html#376087"
-                  ,crtdate     : "July 11, 2010"
-                  ,moddate     : "October 20, 2012"
+                  ,version     : "0.10.0"
+                  ,author      : "YinsitanAI"
+                  ,email       : "yinsitanai0803@gmail.com"
+                  ,homepage    : "https://github.com/YinsitanAI/AHK-ToolKit/"
+                  ,crtdate     : "July 11, 2020"
+                  ,moddate     : "October 06, 2026"
                   ,conf        : "conf.xml"
                   ,repo        : "YinsitanAI/AHK-ToolKit"   ; 更新源：GitHub 仓库 ...
                   ,branch      : "Main"}                    ; ... 及分支（区分大小写；本仓库默认分支为 Main，写成 main 会 404）
@@ -433,7 +438,7 @@ LoadZh(){
         Install hook ($)|强制键盘钩子 ($)
         Fire on release (UP)|松开时触发 (UP)
         Insert key before launch|启动前插入按键
-        Sent first as {Blind}{key}. Example: vk07 stops Shift hotkeys from toggling the IME.|先以 {Blind}{按键} 的形式发送，例如 vk07 可避免 Shift 热键触发输入法中英文切换。
+        Sent first as {Blind}{key}. Example: vkE8 stops Shift hotkeys from toggling the IME.|先以 {Blind}{按键} 的形式发送，例如 vkE8 可避免 Shift 热键触发输入法中英文切换。
         &Cancel|取消(&C)
         Add Hotkey|添加热键
         Import from|导入来源
@@ -701,10 +706,10 @@ AddHKGui(){
     Gui, 02: Add, CheckBox, x424 y170 w190 vhkHook, % Tr("Install hook ($)")
     Gui, 02: Add, CheckBox, x+8 yp w190 vhkfRel, % Tr("Fire on release (UP)")
 
-    ; 插入按键：触发后先补发该按键，再启动目标（等价于 RunNoToggle：先发 {Blind}{vk07} 再 Run）
+    ; 插入按键：触发后先补发该按键，再启动目标（等价于 RunNoToggle：先发 {Blind}{vkE8} 再 Run）
     Gui, 02: Add, CheckBox, x424 y204 w200 vhkIns gGuiHandler, % Tr("Insert key before launch")
-    Gui, 02: Add, Edit, x632 y200 w96 vhkInsKey, vk07
-    Gui, 02: Add, Text, x424 y230 w384 h30, % Tr("Sent first as {Blind}{key}. Example: vk07 stops Shift hotkeys from toggling the IME.")
+    Gui, 02: Add, Edit, x632 y200 w96 vhkInsKey, vkE8
+    Gui, 02: Add, Text, x424 y230 w384 h30, % Tr("Sent first as {Blind}{key}. Example: vkE8 stops Shift hotkeys from toggling the IME.")
 
     ; 下排：行为选项（把原先要手写脚本才能实现的常见玩法做成界面选项）
     Gui, 02: +Delimiter|                            ; 上面的按键列表用空格分隔；之后的列表控件改回 | 分隔
@@ -811,7 +816,7 @@ AboutGui(){
     Gui, 08: Add, Text, x24 y+6 w120, % Tr("Homepage")
     Gui, 08: Add, Link, x+0 yp w290 r2, % "<a href=""" script.homepage """>" script.homepage "</a>"
 
-    license := "Copyright ©2010-2012 " script.author " <GPLv3>`n`n"
+    license := "Copyright ©2020-2026 " script.author " <GPLv3>`n`n"
              . "This program is free software: you can redistribute it and/or modify it "
              . "under the terms of the GNU General Public License as published by "
              . "the Free Software Foundation, either version 3 of the License, "
@@ -918,7 +923,7 @@ GuiReset(n){
         DDLSelect(2, "hkey", "None")
         GuiControl, 02:, hkIfWin
         GuiControl, 02:, hkIfWinN
-        GuiControl, 02:, hkInsKey, vk07
+        GuiControl, 02:, hkInsKey, vkE8
         SyncDlg()
         GuiControl, 02:, btnHkOK, % Tr("&Add")
         Gui, 02: Show, Hide, % Tr("Add Hotkey")
@@ -1125,6 +1130,9 @@ HkOpts(node, act, nact, hold){
          , dbl: node.getAttribute("dbl"), run: node.getAttribute("running"), keys: node.getAttribute("runkeys")
          , tb: node.getAttribute("titlebar") }
     RegExMatch(node.getAttribute("key"), "O)^[$~*<>^!+#]*(.+?)( UP)?$", m)
+    ; 旧配置里存的 vk07 自 Win10 1909 起被系统保留给 Game Bar（AHK 文档 #MenuMaskKey 一节），运行时换成未分配的 vkE8
+    if (o.ins = "vk07")
+        o.ins := "vkE8"
     o.bkey := m[1]                                  ; 去掉前缀和 UP 后的主键名，供「双击」用 KeyWait 检测（不能叫 base：那是 AHK 对象的保留属性）
     ; 上下文承载不了的窗口条件，改在触发时检查：设置了「按住某键」时上下文被占用（act、nact 都要查）；
     ; 「激活」和「非激活」同时设置时，上下文只承载「激活」，「非激活」在触发时查
@@ -1208,7 +1216,10 @@ HotkeyHandler(o){
             ToolTip
         }
         else if (o.run = "send")
+        {
+            WaitModsUp()
             Send, % o.keys
+        }
         return                                      ; skip：什么都不做
     }
     try
@@ -1217,6 +1228,16 @@ HotkeyHandler(o){
         MsgBox, 0x10
               , % Tr("Error")
               , % Tr("The file this hotkey is trying to access does not exist.") "`n" o.path
+}
+
+; 发送不带 {Blind} 的按键前，先等用户松开全部修饰键（每个最多等 1 秒，超时照常发送）。
+; 不带 {Blind} 的 Send 遇到仍按着的修饰键，会先注入一个弹起、发完再注入按下来「还原」。
+; 只要系统里还有别的程序装着低级键盘钩子（PasteJump 就有），AutoHotkey 官方文档说明 SendInput
+; 就失去了「整组不可打断」的优势：用户的物理按键可能插进这串注入中间，注入的 Ctrl 弹起若落在
+; 用户新按下的 Ctrl 之后，随后的 C 就成了字母 c。修饰键都已松开时 Send 无需释放/还原，竞态不存在。
+WaitModsUp(timeout := 1){
+    for i, k in ["Ctrl", "Alt", "Shift", "LWin", "RWin"]
+        KeyWait, %k%, T%timeout%
 }
 
 ; 双击检测：等第一次按键松开后，在 ms 毫秒内是否再次按下（等价于 KeyWait, key / KeyWait, key, D T0.x）
@@ -1236,6 +1257,7 @@ TitleBarMove(){
     WinGetPos,,, w,, ahk_id %id%
     if (my > 0 && my < DpiScale * 50 && title != "Program Manager")
     {
+        WaitModsUp()
         SendInput, % (mx < w / 2) ? "+#{Left}" : "+#{Right}"
         return True
     }
@@ -1303,7 +1325,7 @@ SaveHK(){
     fullkey := (hkHook ? "$" : "") (hkSend ? "~" : "") (hkWild ? "*" : "") mods hkey (hkfRel ? " UP" : "")
     ins := hkIns ? Trim(hkInsKey, " `t{}") : ""
     if (hkIns && ins = "")
-        ins := "vk07"
+        ins := "vkE8"
     SplitPath, path,,,, name
     name := Trim(hkName) != "" ? Trim(hkName) : (type = "Search") ? Tr("File Search") : name
 
@@ -1314,7 +1336,7 @@ SaveHK(){
         MsgBox, 0x10, % Tr("Error while trying to create new Hotkey"), % Tr("A hotkey with this key already exists:`n{1}", hkSwap(dup, "long"))
         return False
     }
-    for i, r in ["^F12", "^CtrlBreak", MainKeyStr()]
+    for i, r in ["^F12", "^CtrlBreak", "#F11", MainKeyStr()]
         if (HkId(r) = HkId(fullkey))
         {
             MsgBox, 0x10, % Tr("Error while trying to create new Hotkey"), % Tr("This hotkey is reserved by the program:`n{1}", hkSwap(r, "long"))
@@ -1852,121 +1874,57 @@ ListHandler(){
         Gui, 01: Default
     }
 }
-;}
 
-;[Hotkeys/Hotstrings]{
+
+
 ^F12::Suspend, Toggle
 ^CtrlBreak::Reload
+#F11::KeyHistory                    ; 临时诊断：Win+F11 查看最近 500 个按键事件（见文件开头 #KeyHistory）
 
+; ---------------------------------------------------------------------------------------------
+; 按键抖动过滤（防止 Ctrl+C 时 C 键抖动，多出字母 c 覆盖掉选中文字）
+; ---------------------------------------------------------------------------------------------
+; 开关老化 / 进灰后，按下或松开的瞬间触点会反复通断，系统收到「↓↑↓↑」。多出来的那次↓若落在
+; Ctrl 已松开之后，就成了字母 c。这里只拦截「刚松开又按下」的那一次按下，两条规则：
+;   1) 距该键上次松开不到 DebounceMs                          → 抖动（普通打字、按住 Ctrl 时的连击）
+;   2) 上一下是 Ctrl+C，这一下没有 Ctrl，且距松开不到 ChordMs → 抖动（专治 Ctrl+C 后冒出来的 c）
+; 只拦截、不补发：放行的是系统原生按键，输入法 / 长按连发 / 其他钩子程序都不受影响；
+; 只看物理按键，KeePass 自动输入、文本扩展等程序注入的按键一律放行；
+; 被拦下的按下，其配对的弹起由 AHK 一并吞掉，放行的按下其弹起必定放行，不会卡键；
+; #If 求值超时（见文件开头 #IfTimeout）时按键照常放行。别的键也抖，照抄这两行即可，如 *v:: / *v up::
+#If ChatterGuard()
+*c::return
+*c up::return
+#If
 
+ChatterGuard(){
+    static DebounceMs := 30, ChordMs := 150         ; 阈值（毫秒），说明见上
+    static freq := 0, lastUp := {}, held := {}, chord := {}
+    if !freq
+        DllCall("QueryPerformanceFrequency", "Int64*", freq)
+    DllCall("QueryPerformanceCounter", "Int64*", now)   ; 高精度计时（A_TickCount 精度约 16 ms，不够用）
+    k := RegExReplace(A_ThisHotkey, "i)^\*|\s+up$")
+    p := GetKeyState(k, "P")                        ; 钩子在求值前已按本次事件更新物理状态：物理按下=1，弹起或程序注入=0
+    if RegExMatch(A_ThisHotkey, "i)\sup$")
+    {
+        ; 按下时 AHK 也会预先查询一次 up 变体（此时 p=1），只有真正的物理弹起才记时间
+        if (!p && held[k])
+            lastUp[k] := now, held[k] := False
+        return False
+    }
+    if !p                                           ; 程序注入的按下：不过滤
+        return False
+    held[k] := True
+    ctrl := GetKeyState("Ctrl")
+    if lastUp.HasKey(k)
+    {
+        dt := (now - lastUp[k]) * 1000 / freq       ; 距上次物理松开的毫秒数
+        if (dt < DebounceMs || (chord[k] && !ctrl && dt < ChordMs))
+            return True                             ; 抖动：拦截这次按下
+    }
+    chord[k] := ctrl                                ; 放行：记下这一下是否按着 Ctrl
+    return False
+}
 
-
-;Shift组合快捷键与输入法切换的冲突解决方案
-;~ ===============================================================================================
-;~ ===============================================================================================
-;~ +z::RunNoToggle("D:\音速启动软件\TC操作\桌面.ahk")
-;~ +y::RunNoToggle("D:\常用的绿色软件\英语软件.txt")
-;~ +x::RunNoToggle("D:\音速启动软件\TC操作\桌面文件.ahk")
-;~ +w::RunNoToggle("D:\音速启动软件\TC操作\激活TC.ahk")
-;~ +u::RunNoToggle("D:\音速启动软件\U盘操作\U盘.ahk")
-;~ +t::RunNoToggle("D:\zrks键盘图.png")
-;~ +s::RunNoToggle("D:\音速启动软件\完美删除\删除.ahk")
-;~ +r::RunNoToggle("D:\音速启动软件\TC操作\绿色软件.ahk")
-;~ +q::RunNoToggle("D:\音速启动软件\TC操作\我的电脑.ahk")
-;~ +p::RunNoToggle("D:\音速启动软件\TC操作\程序文件.ahk")
-;~ +o::RunNoToggle("D:\股票操作.png")
-;~ +m::RunNoToggle("D:\MarkText图.png")
-;~ +k::RunNoToggle("D:\快捷键图.jpg")
-;~ +h::RunNoToggle("D:\音速启动软件\TC操作\H盘.ahk")
-;~ +g::RunNoToggle("D:\音速启动软件\TC操作\G盘.ahk")
-;~ +f::RunNoToggle("D:\音速启动软件\TC操作\F盘.ahk")
-;~ +e::RunNoToggle("D:\音速启动软件\TC操作\E盘.ahk")
-;~ +d::RunNoToggle("D:\音速启动软件\TC操作\D盘.ahk")
-;~ +c::RunNoToggle("D:\音速启动软件\TC操作\C盘.ahk")
-;~ +b::RunNoToggle("D:\音速启动软件\TC操作\博士学习.ahk")
-;~ +CapsLock::RunNoToggle("D:\音速启动软件\Candy\Candy菜单\Candy菜单.ahk")
-
-
-
-; 运行指定脚本，同时阻止 WindInput 把这次 Shift 当成单击（不切中英文、不弹气泡）
-;~ RunNoToggle(path)
-;~ {
-    ;~ SendInput {Blind}{vk07}                        ; 必须最先执行：趁 Shift 还按着补发空键
-    ;~ run,%path%
-    ;~ if ErrorLevel
-        ;~ MsgBox, 无法运行：`n%path%
-;~ }
-;~ ===============================================================================================
-
-
-
-
-
-
-
-
-;添加鼠标第三个和第四个按键快捷键 / 双击 Alt / ^` 翻译 / LButton+RButton 切换翻译工具 / !CapsLock 内置搜索
-;~ ===============================================================================================
-; 上述原先手写在这里的热键，现已全部改为「界面配置」（见 conf.xml 与添加热键窗口的「行为」选项）：
-;   XButton1 UP        → 窗口标题栏移屏 + 「已在运行时发送 {Click}」
-;   Alt（双击）        → 双击触发
-;   ^`                 → 带参数的普通文件热键
-;   RButton            → 「仅当按住 LButton」+「已在运行时关闭它」
-;   !CapsLock          → 类型「内置搜索」
-; 删除静态定义是为了避免与界面里同键的热键重复注册（后注册的会覆盖先注册的）。
-;~ ===============================================================================================
-
-; ===============================================================================================
-;双击Ctrl键激活搜索（已停用，仅作参考。不要用「非透传」的 Ctrl 热键实现：会吞掉 Ctrl，导致 Ctrl+C 失灵）
-; ============================================================
-;~ #InstallMouseHook            ; 让A_PriorKey能看见鼠标事件：Ctrl+点击/Ctrl+滚轮 也会被正确"作废"
-;~ lastCtrlUp := 0              ; 必须初始化！且必须放在脚本顶部自动执行段，
-                             ;~ ; 否则空串按字符串比较恒小于250 → 启动后第一次单击就误触发
-;~ ~Ctrl up::
-    ;~ if (A_PriorKey != "LControl" && A_PriorKey != "RControl")
-    ;~ {                                   ; 按住期间按过其他键(如Ctrl+C) → 作废
-        ;~ lastCtrlUp := 0
-        ;~ return
-    ;~ }
-    ;~ if (A_TickCount - lastCtrlUp < 250) ; 两次抬起间隔250ms内 → 双击成立
-    ;~ {
-        ;~ lastCtrlUp := 0                 ; 清零，防三连击重复触发
-        ;~ Gosub, FileSearchKey
-    ;~ }
-    ;~ else
-        ;~ lastCtrlUp := A_TickCount
-;~ return
-; ===============================================================================================
-;} 
-
-
-
-
-
-/*
- * * * Compile_AHK SETTINGS BEGIN * * *
-[AHK2EXE]
-Exe_File=%In_Dir%\lib\AHK-ToolKit.exe
-Alt_Bin=C:\Program Files\AutoHotkeyW\Compiler\AutoHotkeySC.bin
-[VERSION]
-Set_Version_Info=1
-File_Version=0.9.0-161030
-Inc_File_Version=0
-Internal_Name=AHK-TK
-Legal_Copyright=GNU General Public License 3.0
-Original_Filename=AutoHotkey Toolkit.exe
-Product_Name=AutoHotkey Toolkit
-Product_Version=0.9.0-161030
-[ICONS]
-Icon_1=%In_Dir%\res\AHK-TK.ico
-Icon_2=%In_Dir%\res\AHK-TK.ico
-Icon_3=%In_Dir%\res\AHK-TK.ico
-Icon_4=%In_Dir%\res\AHK-TK.ico
-Icon_5=%In_Dir%\res\AHK-TK.ico
-Icon_6=%In_Dir%\res\AHK-TK.ico
-Icon_7=%In_Dir%\res\AHK-TK.ico
-
-* * * Compile_AHK SETTINGS END * * *
-*/
 
 #include <FileSearch>
